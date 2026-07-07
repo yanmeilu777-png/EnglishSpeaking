@@ -183,11 +183,15 @@
       <h2 id="topic-title"></h2>
       <p class="muted" id="topic-blurb" style="font-size:14px; margin:8px 0 16px;"></p>
       <div id="topic-questions"></div>
-      <h3 style="margin-top:16px;">Useful language for this topic</h3>
-      <div id="topic-vocab"></div>
       <div class="row" style="margin-top:16px;">
-        <button class="btn" id="topic-next">Try another topic</button>
+        <button class="btn primary" id="topic-hear">&#9658; Hear questions</button>
+        <button class="btn rec" id="topic-record">&#9679; Record</button>
+        <button class="btn" id="topic-next">Next topic</button>
       </div>
+      <div class="waveform" id="topic-wave" style="display:none;"></div>
+      <div id="topic-playback"></div>
+      <h3 style="margin-top:20px;">Useful language for this topic</h3>
+      <div id="topic-vocab"></div>
     </div>
     <div class="card">
       <h3>All topics</h3>
@@ -470,7 +474,14 @@ function renderTopics(){
     `<div class="topic-link" onclick="setTopic(${i})">${topic.title}</div>`
   ).join('');
 }
+function resetTopicRecording(){
+  const rec = document.getElementById('topic-record');
+  if(rec && rec.classList.contains('active')) rec.click();
+  const pb = document.getElementById('topic-playback');
+  if(pb) pb.innerHTML = '';
+}
 function setTopic(i){
+  resetTopicRecording();
   state.topicIndex = i;
   saveState();
   renderTopics();
@@ -667,6 +678,7 @@ document.querySelectorAll('nav button').forEach(btn=>{
 });
 
 document.getElementById('topic-next').addEventListener('click', ()=>{
+  resetTopicRecording();
   state.topicIndex = (state.topicIndex+1) % TOPICS.length;
   saveState();
   renderTopics();
@@ -697,6 +709,18 @@ document.getElementById('reset-btn').addEventListener('click', async ()=>{
   render();
 });
 
+// shared AudioContext — one instance for all tabs; iOS Safari caps concurrent contexts
+let sharedAudioCtx = null;
+function getSharedAudioCtx(){
+  if(!sharedAudioCtx || sharedAudioCtx.state === 'closed'){
+    sharedAudioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  }
+  if(sharedAudioCtx.state === 'suspended') sharedAudioCtx.resume().catch(()=>{});
+  return sharedAudioCtx;
+}
+// only one recording active at a time — clicking the active button stops it
+let activeRecordButton = null;
+
 // recording setup (shared helper)
 function setupRecorder(targetText, waveId, transcriptId, playBtnId, onDone){
   let stream, recognition, recognizedText = '';
@@ -707,10 +731,12 @@ function setupRecorder(targetText, waveId, transcriptId, playBtnId, onDone){
       button.classList.remove('active');
       button.textContent = button.dataset.label || '● Record';
       if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
-      if(recognition) recognition.stop();
+      if(recognition){ try{ recognition.stop(); }catch(e){} }
       if(stream) stream.getTracks().forEach(t=>t.stop());
+      activeRecordButton = null;
       return;
     }
+    if(activeRecordButton && activeRecordButton !== button) activeRecordButton.click();
     try{
       stream = await navigator.mediaDevices.getUserMedia({audio:true});
     }catch(e){
@@ -720,10 +746,12 @@ function setupRecorder(targetText, waveId, transcriptId, playBtnId, onDone){
     button.classList.add('active');
     button.dataset.label = button.textContent;
     button.textContent = '● Stop';
+    activeRecordButton = button;
     waveEl.style.display = 'flex';
     waveEl.innerHTML = '';
+    bars = [];
     for(let i=0;i<24;i++){ const b=document.createElement('div'); b.className='bar'; waveEl.appendChild(b); bars.push(b); }
-    const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const audioCtx = getSharedAudioCtx();
     const src = audioCtx.createMediaStreamSource(stream);
     const analyser = audioCtx.createAnalyser();
     analyser.fftSize = 64;
@@ -742,7 +770,7 @@ function setupRecorder(targetText, waveId, transcriptId, playBtnId, onDone){
     mediaRecorder.ondataavailable = e=>audioChunks.push(e.data);
     mediaRecorder.onstop = ()=>{
       cancelAnimationFrame(animId);
-      audioCtx.close();
+      src.disconnect();
       waveEl.style.display='none';
       const blob = new Blob(audioChunks, {type:'audio/webm'});
       if(playBtnId){
@@ -792,6 +820,27 @@ document.getElementById('pron-record').addEventListener('click', function(){
   startPronRecording(this);
 });
 
+document.getElementById('topic-hear').addEventListener('click', ()=>{
+  const t = TOPICS[state.topicIndex];
+  speak(t.questions.join('. '));
+});
+
+const startTopicRecording = setupRecorder(null, 'topic-wave', null, null, (heard, blob)=>{
+  if(!blob) return;
+  const pb = document.getElementById('topic-playback');
+  const url = URL.createObjectURL(blob);
+  pb.innerHTML = '';
+  const btn = document.createElement('button');
+  btn.className = 'btn';
+  btn.style.marginTop = '10px';
+  btn.innerHTML = '&#9658; Play back';
+  btn.onclick = ()=> new Audio(url).play();
+  pb.appendChild(btn);
+});
+document.getElementById('topic-record').addEventListener('click', function(){
+  startTopicRecording(this);
+});
+
 const FILLER_WORDS = ["um","uh","umm","uhh","like","you know","actually","basically","kind of","sort of","so yeah","i mean"];
 let presentRecorder, presentStream, presentStart, presentTimerInterval, presentRecognizedText = '';
 document.getElementById('present-record').addEventListener('click', async function(){
@@ -802,8 +851,10 @@ document.getElementById('present-record').addEventListener('click', async functi
     clearInterval(presentTimerInterval);
     if(presentRecorder && presentRecorder.state !== 'inactive') presentRecorder.stop();
     if(presentStream) presentStream.getTracks().forEach(t=>t.stop());
+    activeRecordButton = null;
     return;
   }
+  if(activeRecordButton && activeRecordButton !== button) activeRecordButton.click();
   try{
     presentStream = await navigator.mediaDevices.getUserMedia({audio:true});
   }catch(e){
@@ -812,13 +863,14 @@ document.getElementById('present-record').addEventListener('click', async functi
   }
   button.classList.add('active');
   button.textContent = '● Stop';
+  activeRecordButton = button;
   presentRecognizedText = '';
   const waveEl = document.getElementById('present-wave');
   waveEl.style.display = 'flex';
   waveEl.innerHTML = '';
   const bars = [];
   for(let i=0;i<24;i++){ const b=document.createElement('div'); b.className='bar'; waveEl.appendChild(b); bars.push(b); }
-  const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  const audioCtx = getSharedAudioCtx();
   const src = audioCtx.createMediaStreamSource(presentStream);
   const analyser = audioCtx.createAnalyser();
   analyser.fftSize = 64;
@@ -839,7 +891,7 @@ document.getElementById('present-record').addEventListener('click', async functi
   presentRecorder.ondataavailable = e=>chunks.push(e.data);
   presentRecorder.onstop = ()=>{
     cancelAnimationFrame(animId);
-    audioCtx.close();
+    src.disconnect();
     waveEl.style.display = 'none';
     clearInterval(presentTimerInterval);
     const durationSec = Math.max(1, Math.round((Date.now()-presentStart)/1000));
