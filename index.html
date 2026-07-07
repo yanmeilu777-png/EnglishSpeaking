@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fluent — daily English practice</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #14213D;
+    --card: #1D2D50;
+    --card-2: #24365E;
+    --text: #F2EFE9;
+    --muted: #9AA5C1;
+    --gold: #E8A33D;
+    --gold-dim: rgba(232,163,61,0.15);
+    --sage: #7FA37D;
+    --sage-dim: rgba(127,163,125,0.15);
+    --coral: #E1665C;
+    --coral-dim: rgba(225,102,92,0.15);
+    --border: rgba(242,239,233,0.1);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Inter',sans-serif; line-height:1.5;
+    min-height:100vh;
+  }
+  .wrap{max-width:720px; margin:0 auto; padding:28px 20px 80px;}
+  h1,h2,h3{font-family:'Fraunces',serif; font-weight:500; margin:0;}
+  h1{font-size:26px;}
+  h2{font-size:19px;}
+  h3{font-size:16px;}
+  .muted{color:var(--muted);}
+  header{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;}
+  .tagline{color:var(--muted); font-size:14px; margin-bottom:22px;}
+  .streak{
+    display:flex; align-items:center; gap:6px; background:var(--gold-dim);
+    color:var(--gold); padding:6px 12px; border-radius:20px; font-size:13px; font-weight:500;
+    white-space:nowrap;
+  }
+  nav{display:flex; gap:4px; background:var(--card); padding:4px; border-radius:12px; margin-bottom:24px; border:1px solid var(--border);}
+  nav button{
+    flex:1; background:transparent; border:none; color:var(--muted); font-family:'Inter';
+    font-size:13px; font-weight:500; padding:10px 6px; border-radius:9px; cursor:pointer;
+    transition:all .15s;
+  }
+  nav button.active{background:var(--gold); color:#14213D;}
+  section{display:none;}
+  section.active{display:block;}
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:14px;
+    padding:20px; margin-bottom:16px;
+  }
+  .tag{
+    display:inline-block; font-size:11px; font-weight:600; letter-spacing:.03em; text-transform:uppercase;
+    padding:3px 9px; border-radius:20px; margin-bottom:12px;
+  }
+  .tag.family{background:var(--coral-dim); color:var(--coral);}
+  .tag.work{background:var(--gold-dim); color:var(--gold);}
+  .tag.presentation{background:var(--sage-dim); color:var(--sage);}
+  .phrase{font-family:'Fraunces',serif; font-size:21px; margin:6px 0 10px; line-height:1.4;}
+  .ipa{font-family:'IBM Plex Mono',monospace; color:var(--muted); font-size:13px; margin-bottom:12px;}
+  .tip{font-size:14px; color:var(--muted); border-left:2px solid var(--border); padding-left:12px; margin-top:10px;}
+  .row{display:flex; gap:10px; flex-wrap:wrap;}
+  button.btn{
+    background:var(--card-2); color:var(--text); border:1px solid var(--border);
+    padding:9px 16px; border-radius:9px; font-family:'Inter'; font-size:13px; font-weight:500;
+    cursor:pointer; display:inline-flex; align-items:center; gap:6px;
+  }
+  button.btn:hover{border-color:var(--gold);}
+  button.btn.primary{background:var(--gold); color:#14213D; border:none;}
+  button.btn.rec{background:var(--coral-dim); color:var(--coral); border:none;}
+  button.btn.rec.active{background:var(--coral); color:#fff;}
+  button.btn:disabled{opacity:.4; cursor:default;}
+  .word-card{padding:16px 0; border-bottom:1px solid var(--border);}
+  .word-card:last-child{border-bottom:none;}
+  .word-head{display:flex; justify-content:space-between; align-items:baseline;}
+  .word{font-family:'Fraunces',serif; font-size:18px;}
+  .pos{font-size:12px; color:var(--muted); font-style:italic;}
+  .def{font-size:14px; margin:6px 0;}
+  .ex{font-size:13px; color:var(--muted); font-style:italic;}
+  .due{font-size:11px; color:var(--sage); margin-top:4px;}
+  .waveform{display:flex; align-items:center; gap:3px; height:36px; margin:14px 0;}
+  .bar{width:4px; background:var(--gold); border-radius:2px; height:6px; transition:height .1s;}
+  .pair-row{display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px solid var(--border);}
+  .pair-row:last-child{border-bottom:none;}
+  .pair-words{display:flex; gap:18px; align-items:baseline;}
+  .pair-word{font-family:'Fraunces',serif; font-size:18px; cursor:pointer;}
+  .pair-word:hover{color:var(--gold);}
+  .vs{color:var(--muted); font-size:12px;}
+  .stat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:16px;}
+  .stat{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px; text-align:center;}
+  .stat-num{font-family:'Fraunces',serif; font-size:26px; color:var(--gold);}
+  .stat-label{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; margin-top:2px;}
+  .transcript{font-size:14px; margin-top:10px; padding:10px 12px; background:var(--card-2); border-radius:8px;}
+  .match{color:var(--sage);}
+  .mismatch{color:var(--coral); text-decoration:underline;}
+  .empty{color:var(--muted); font-size:14px; text-align:center; padding:24px 0;}
+  select{
+    background:var(--card-2); color:var(--text); border:1px solid var(--border); border-radius:8px;
+    padding:8px 10px; font-family:'Inter'; font-size:13px;
+  }
+  .footnote{font-size:12px; color:var(--muted); margin-top:14px; line-height:1.6;}
+  .q-list{list-style:none; padding:0; margin:0;}
+  .q-list li{font-size:15px; padding:8px 0; border-bottom:1px solid var(--border);}
+  .q-list li:last-child{border-bottom:none;}
+  .q-list li:before{content:"—"; color:var(--gold); margin-right:8px;}
+  .chip-row{display:flex; flex-wrap:wrap; gap:8px; margin-top:8px;}
+  .chip{background:var(--card-2); border:1px solid var(--border); border-radius:20px; padding:6px 12px; font-size:13px;}
+  .chip b{color:var(--gold); font-weight:500;}
+  .topic-link{display:block; padding:8px 0; cursor:pointer; border-bottom:1px solid var(--border); font-size:13px;}
+  .topic-link:last-child{border-bottom:none;}
+  .topic-link:hover{color:var(--gold);}
+  .step-list{list-style:none; padding:0; margin:0; counter-reset:step;}
+  .step-list li{counter-increment:step; padding:10px 0 10px 34px; position:relative; border-bottom:1px solid var(--border); font-size:14px;}
+  .step-list li:last-child{border-bottom:none;}
+  .step-list li:before{content:counter(step); position:absolute; left:0; top:9px; width:22px; height:22px; border-radius:50%; background:var(--gold-dim); color:var(--gold); font-size:12px; font-weight:600; display:flex; align-items:center; justify-content:center;}
+  .step-list b{color:var(--text);}
+  .feedback-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0;}
+  .fb-stat{background:var(--card-2); border-radius:10px; padding:10px; text-align:center;}
+  .fb-num{font-family:'Fraunces',serif; font-size:20px; color:var(--gold);}
+  .fb-label{font-size:11px; color:var(--muted); text-transform:uppercase;}
+  @media (max-width:480px){.stat-grid{grid-template-columns:repeat(3,1fr); gap:8px;} .stat-num{font-size:20px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Fluent</h1>
+    <div class="streak"><i>&#9679;</i><span id="streak-count">0</span> day streak</div>
+  </header>
+  <div class="footnote" id="sync-status" style="display:none; color:var(--coral);"></div>
+  <div class="tagline">Daily practice for family conversations, work small talk, and presentations.</div>
+
+  <nav>
+    <button class="active" data-tab="today">Today</button>
+    <button data-tab="vocab">Vocabulary</button>
+    <button data-tab="topics">Hot topics</button>
+    <button data-tab="pron">Pronunciation</button>
+    <button data-tab="present">Presentation</button>
+    <button data-tab="progress">Progress</button>
+  </nav>
+
+  <section id="today" class="active">
+    <div class="card">
+      <span class="tag" id="today-tag">family</span>
+      <div class="phrase" id="today-phrase"></div>
+      <div class="ipa" id="today-ipa"></div>
+      <div class="tip" id="today-tip"></div>
+      <div class="row" style="margin-top:16px;">
+        <button class="btn primary" id="today-listen">&#9658; Hear it</button>
+        <button class="btn rec" id="today-record">&#9679; Record myself</button>
+        <button class="btn" id="today-next">Next phrase</button>
+      </div>
+      <div class="waveform" id="today-wave" style="display:none;"></div>
+      <div id="today-transcript"></div>
+    </div>
+    <div class="card">
+      <h3>Try it today</h3>
+      <p class="muted" style="font-size:14px; margin:8px 0 12px;">Use this phrase once in real life, then log it.</p>
+      <div class="row">
+        <button class="btn" id="log-used">I used it</button>
+        <button class="btn" id="log-skip">Not yet</button>
+      </div>
+      <div id="log-feedback" class="footnote"></div>
+    </div>
+  </section>
+
+  <section id="vocab">
+    <div class="card">
+      <h2>Words due today</h2>
+      <p class="muted" style="font-size:14px; margin:8px 0 0;">Spaced repetition — words you rate "still learning" come back sooner.</p>
+    </div>
+    <div class="card" id="vocab-list"></div>
+  </section>
+
+  <section id="topics">
+    <div class="card">
+      <span class="tag work">topic of the day</span>
+      <h2 id="topic-title"></h2>
+      <p class="muted" id="topic-blurb" style="font-size:14px; margin:8px 0 16px;"></p>
+      <div id="topic-questions"></div>
+      <h3 style="margin-top:16px;">Useful language for this topic</h3>
+      <div id="topic-vocab"></div>
+      <div class="row" style="margin-top:16px;">
+        <button class="btn" id="topic-next">Try another topic</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>All topics</h3>
+      <div id="topic-browse" class="footnote"></div>
+    </div>
+  </section>
+
+  <section id="pron">
+    <div class="card">
+      <h2>Sounds that trip up Mandarin speakers</h2>
+      <p class="muted" style="font-size:14px; margin:8px 0 16px;">Tap a word to hear it, then record yourself saying the pair.</p>
+      <select id="pron-focus" style="margin-bottom:6px;"></select>
+      <div id="pron-pairs"></div>
+    </div>
+    <div class="card">
+      <h3>Record & compare</h3>
+      <div class="row" style="margin-top:12px;">
+        <button class="btn rec" id="pron-record">&#9679; Record</button>
+        <button class="btn" id="pron-play" disabled>&#9658; Play back</button>
+      </div>
+      <div class="waveform" id="pron-wave" style="display:none;"></div>
+      <div id="pron-transcript"></div>
+      <div class="footnote">Speech recognition works best in Chrome. This compares what the recognizer heard against the target word — a mismatch is a useful hint, not a certainty.</div>
+    </div>
+  </section>
+
+  <section id="present">
+    <div class="card">
+      <h2>Structure templates</h2>
+      <p class="muted" style="font-size:14px; margin:8px 0 16px;">A clear structure makes you sound confident even when you're nervous. Pick one and reuse it until it's automatic.</p>
+      <select id="struct-select" style="margin-bottom:14px;"></select>
+      <div id="struct-body"></div>
+    </div>
+    <div class="card">
+      <h2>Marketing data science glossary</h2>
+      <p class="muted" style="font-size:14px; margin:8px 0 16px;">The terms you'd actually use out loud in a readout, tagged with pronunciation.</p>
+      <div id="marketing-glossary"></div>
+    </div>
+    <div class="card">
+      <h2>Practice a pitch</h2>
+      <p class="muted" id="present-prompt" style="font-size:15px; margin:8px 0 14px; font-family:'Fraunces',serif;"></p>
+      <div class="row">
+        <button class="btn rec" id="present-record">&#9679; Record (aim for 30–60s)</button>
+        <button class="btn" id="present-new">New prompt</button>
+      </div>
+      <div class="waveform" id="present-wave" style="display:none;"></div>
+      <div id="present-timer" class="muted" style="font-size:13px; margin-top:8px;"></div>
+      <div id="present-feedback"></div>
+    </div>
+  </section>
+
+  <section id="progress">
+    <div class="stat-grid">
+      <div class="stat"><div class="stat-num" id="stat-streak">0</div><div class="stat-label">day streak</div></div>
+      <div class="stat"><div class="stat-num" id="stat-words">0</div><div class="stat-label">words mastered</div></div>
+      <div class="stat"><div class="stat-num" id="stat-used">0</div><div class="stat-label">phrases used live</div></div>
+    </div>
+    <div class="card">
+      <h3>Recent activity</h3>
+      <div id="activity-list" class="footnote"></div>
+    </div>
+    <div class="card">
+      <h3>Reset progress</h3>
+      <p class="muted" style="font-size:13px;">Clears all saved data on this device.</p>
+      <button class="btn" id="reset-btn" style="margin-top:8px;">Clear all data</button>
+    </div>
+  </section>
+
+  <div class="footnote" style="margin-top:20px; text-align:center;">
+    Data is saved to your account and syncs across sessions in Claude. Recording and playback require microphone access.
+  </div>
+</div>
+
+<script>
+const PHRASES = [
+  {cat:'family', text:"I've been meaning to ask you something.", ipa:"/aɪv bɪn ˈmiːnɪŋ tuː æsk juː ˈsʌmθɪŋ/", tip:"A gentle way to open a topic you've been holding onto. Pause after it — let them invite you in."},
+  {cat:'family', text:"It means a lot to me that you noticed.", ipa:"/ɪt miːnz ə lɒt tuː miː ðæt juː ˈnoʊtɪst/", tip:"Use this to acknowledge care without sounding overly formal."},
+  {cat:'family', text:"I never really thought about it that way until now.", ipa:"/aɪ ˈnɛvər ˈrɪli θɔːt əˈbaʊt ɪt ðæt weɪ ənˈtɪl naʊ/", tip:"Shows you're genuinely reflecting, not just agreeing to end the conversation."},
+  {cat:'family', text:"Can we talk about this without it turning into an argument?", ipa:"/kæn wiː tɔːk əˈbaʊt ðɪs wɪˈðaʊt ɪt ˈtɜːrnɪŋ ˈɪntuː æn ˈɑːrɡjəmənt/", tip:"A calm, non-confrontational way to set the tone before a hard topic."},
+  {cat:'family', text:"I know it's not easy, but I'm really proud of you.", ipa:"/aɪ noʊ ɪts nɒt ˈiːzi bʌt aɪm ˈrɪli praʊd əv juː/", tip:"Acknowledging difficulty first makes the praise land as sincere, not automatic."},
+  {cat:'family', text:"There's something I've been carrying around, and I want to share it with you.", ipa:"/ðɛrz ˈsʌmθɪŋ aɪv bɪn ˈkæriɪŋ əˈraʊnd ænd aɪ wɒnt tuː ʃɛr ɪt wɪð juː/", tip:"A deeper opener than 'I need to tell you something' — signals emotional weight."},
+  {cat:'work', text:"How's the project coming along?", ipa:"/haʊz ðə ˈprɒdʒɛkt ˈkʌmɪŋ əˈlɒŋ/", tip:"The default check-in question at work. Neutral, easy, always works."},
+  {cat:'work', text:"I hear you on that — it's been a crazy week.", ipa:"/aɪ hɪr juː ɒn ðæt ɪts bɪn ə ˈkreɪzi wiːk/", tip:"'I hear you' shows empathy without agreeing or disagreeing — very useful in small talk."},
+  {cat:'work', text:"Let's circle back to this after the meeting.", ipa:"/lɛts ˈsɜːrkəl bæk tuː ðɪs ˈæftər ðə ˈmiːtɪŋ/", tip:"Common corporate phrase for postponing a topic without dismissing it."},
+  {cat:'work', text:"Speaking of which, did you catch the game last night?", ipa:"/ˈspiːkɪŋ əv wɪtʃ dɪd juː kætʃ ðə ɡeɪm læst naɪt/", tip:"A smooth transition phrase — links back to something just said before changing subject."},
+  {cat:'work', text:"No rush, whenever you get a chance.", ipa:"/noʊ rʌʃ wɛnˈɛvər juː ɡɛt ə tʃæns/", tip:"Softens a request so it doesn't sound like a demand."},
+  {cat:'work', text:"I'll let you get back to it — just wanted to say hi.", ipa:"/aɪl lɛt juː ɡɛt bæk tuː ɪt dʒʌst ˈwɒntɪd tuː seɪ haɪ/", tip:"A natural way to exit a short hallway or elevator conversation."},
+  {cat:'presentation', text:"Let's take a step back and look at the bigger picture.", ipa:"/lɛts teɪk ə stɛp bæk ænd lʊk æt ðə ˈbɪɡər ˈpɪktʃər/", tip:"Signals a shift from detail to context — useful before summarizing."},
+  {cat:'presentation', text:"That brings me to my next point.", ipa:"/ðæt brɪŋz miː tuː maɪ nɛkst pɔɪnt/", tip:"A clean transition. Say it with a small pause before and after."},
+  {cat:'presentation', text:"To put this into perspective...", ipa:"/tuː pʊt ðɪs ˈɪntuː pərˈspɛktɪv/", tip:"Great lead-in before a comparison or statistic."},
+  {cat:'presentation', text:"I want to draw your attention to this trend.", ipa:"/aɪ wɒnt tuː drɔː jʊr əˈtɛnʃən tuː ðɪs trɛnd/", tip:"Redirects focus to a specific slide element or data point."},
+  {cat:'presentation', text:"Let me pause here — any questions so far?", ipa:"/lɛt miː pɔːz hɪr ˈɛni ˈkwɛstʃənz soʊ fɑːr/", tip:"Invites interaction without losing control of the room."},
+  {cat:'presentation', text:"To wrap things up, here's what I'd like you to take away.", ipa:"/tuː ræp θɪŋz ʌp hɪrz wʌt aɪd laɪk juː tuː teɪk əˈweɪ/", tip:"Signals the close and primes the audience to remember your key point."}
+];
+
+const VOCAB = [
+  {word:"nuance", ipa:"/ˈnuːˌɑːns/", pos:"noun", def:"a subtle difference in meaning, tone, or feeling.", ex:"There's a nuance in how she said 'fine' — she didn't mean it.", cat:"family"},
+  {word:"candid", ipa:"/ˈkændɪd/", pos:"adjective", def:"honest and direct, even when it's uncomfortable.", ex:"Can I be candid with you about how I've been feeling?", cat:"family"},
+  {word:"rapport", ipa:"/ræˈpɔːr/", pos:"noun", def:"a friendly, trusting connection with someone.", ex:"We built good rapport in the first five minutes of the call.", cat:"work"},
+  {word:"touch base", ipa:"/tʌtʃ beɪs/", pos:"phrase", def:"to make brief contact to check in.", ex:"Let's touch base tomorrow before the deadline.", cat:"work"},
+  {word:"bandwidth", ipa:"/ˈbændˌwɪdθ/", pos:"noun, informal", def:"the time or mental capacity to take something on.", ex:"I don't have the bandwidth for another project this week.", cat:"work"},
+  {word:"take with a grain of salt", ipa:"/teɪk wɪð ə ɡreɪn əv sɔːlt/", pos:"phrase", def:"to not fully trust something; treat it with mild skepticism.", ex:"Take his advice with a grain of salt — he's never actually done it.", cat:"work"},
+  {word:"compelling", ipa:"/kəmˈpɛlɪŋ/", pos:"adjective", def:"convincing and interesting enough to hold attention.", ex:"That's a compelling argument — I hadn't considered that angle.", cat:"presentation"},
+  {word:"streamline", ipa:"/ˈstriːmˌlaɪn/", pos:"verb", def:"to make a process simpler or more efficient.", ex:"We streamlined the approval process from five steps to two.", cat:"presentation"},
+  {word:"overarching", ipa:"/ˌoʊvərˈɑːrtʃɪŋ/", pos:"adjective", def:"the main idea that covers everything else.", ex:"Our overarching goal this quarter is customer retention.", cat:"presentation"},
+  {word:"resonate", ipa:"/ˈrɛzəˌneɪt/", pos:"verb", def:"to connect emotionally or meaningfully with someone.", ex:"That story really resonated with the audience.", cat:"presentation"},
+  {word:"articulate", ipa:"/ɑːrˈtɪkjəˌleɪt/", pos:"verb", def:"to express an idea clearly and precisely.", ex:"She articulated the problem better than I ever could.", cat:"presentation"},
+  {word:"reconcile", ipa:"/ˈrɛkənˌsaɪl/", pos:"verb", def:"to make two conflicting things fit together, or make peace after conflict.", ex:"It took years for them to reconcile after the argument.", cat:"family"},
+  {word:"vulnerable", ipa:"/ˈvʌlnərəbəl/", pos:"adjective", def:"open to being emotionally hurt; willing to show that.", ex:"It's hard to be vulnerable with family sometimes.", cat:"family"},
+  {word:"pivot", ipa:"/ˈpɪvət/", pos:"verb", def:"to change direction or approach, often quickly.", ex:"We had to pivot our strategy after the client feedback.", cat:"work"},
+  {word:"leverage", ipa:"/ˈlɛvərɪdʒ/", pos:"verb", def:"to use something effectively to your advantage.", ex:"We can leverage the existing data instead of starting from scratch.", cat:"work"}
+];
+
+const TOPICS = [
+  {title:"AI at work", blurb:"How AI tools are changing daily jobs.", questions:["Has AI changed how you do your job this year?","Do you think AI will replace more jobs than it creates?","What's one task you'd happily hand over to AI?"], vocab:[["automate","to make a process run without human effort"],["displace","to push something out of its usual place or role"],["upskill","to learn new skills to stay relevant at work"]]},
+  {title:"Return to office vs. remote work", blurb:"Companies pulling people back to the office.", questions:["Would you rather work from home or in an office?","What's something you miss about in-person work?","Do you think remote work makes people less connected?"], vocab:[["hybrid","part remote, part in-office work arrangement"],["commute","the trip between home and work"],["watercooler talk","casual small talk at the office"]]},
+  {title:"The four-day work week", blurb:"More companies are testing shorter work weeks.", questions:["Would a four-day work week work for your job?","Do you think shorter weeks make people more productive?","What would you do with an extra day off?"], vocab:[["productivity","how efficiently work gets done"],["burnout","exhaustion from prolonged stress at work"],["trial run","a temporary test of something new"]]},
+  {title:"Streaming price hikes", blurb:"Subscription costs keep going up.", questions:["Have you cancelled a streaming service recently?","Do you think ad-supported plans are worth it?","How do you decide which subscriptions are worth keeping?"], vocab:[["subscription fatigue","tiredness from paying for too many services"],["bundle","several services or products sold together"],["cord-cutting","cancelling cable in favor of streaming"]]},
+  {title:"Cost of living", blurb:"Prices for everyday things feeling higher.", questions:["What's gotten noticeably more expensive for you lately?","Have you changed any habits because of prices?","Do you think things will get cheaper again soon?"], vocab:[["inflation","a general rise in prices over time"],["tighten the belt","to spend less money than before"],["splurge","to spend more than usual on something"]]},
+  {title:"Social media detox", blurb:"More people are cutting back on social apps.", questions:["Have you ever taken a break from social media?","Do you think it helped or did you miss out?","What app would be hardest for you to give up?"], vocab:[["doomscrolling","endlessly scrolling negative news or content"],["FOMO","fear of missing out"],["mindful use","using something intentionally, not out of habit"]]},
+  {title:"Generational differences at work", blurb:"Gen Z, Millennials, and older generations clashing on norms.", questions:["Have you noticed generational differences on your team?","What's one thing younger coworkers do differently?","Do you think workplace norms are changing for the better?"], vocab:[["norms","the usual, expected way of doing things"],["work ethic","attitude and effort someone brings to work"],["boundaries","limits people set on their time or energy"]]},
+  {title:"Electric vehicles going mainstream", blurb:"EVs becoming a normal choice, not a niche one.", questions:["Would you consider buying an electric car?","What's holding people back from switching to EVs?","Do you think gas cars will disappear eventually?"], vocab:[["charging station","a place to recharge an electric vehicle"],["range anxiety","worry about a car's battery running out"],["mainstream","widely accepted, not unusual anymore"]]},
+  {title:"Mental health awareness", blurb:"More openness about stress and burnout, especially at work.", questions:["Do you think it's easier to talk about mental health now than before?","Has your workplace done anything to support mental health?","What helps you manage stress day to day?"], vocab:[["burnout","exhaustion from prolonged stress"],["destigmatize","to make a topic less shameful to discuss"],["decompress","to relax and release built-up stress"]]},
+  {title:"Travel comeback", blurb:"People traveling more after years of pandemic caution.", questions:["Where's somewhere you'd like to travel this year?","Do you prefer planning everything or being spontaneous?","What's the most memorable trip you've taken?"], vocab:[["itinerary","a planned schedule for a trip"],["off the beaten path","somewhere not commonly visited by tourists"],["jet lag","tiredness from traveling across time zones"]]},
+  {title:"Housing market", blurb:"Rent and home prices are a constant conversation topic.", questions:["Do you think it's a good time to buy property?","Is renting or buying more common where you live?","What matters most to you in a home?"], vocab:[["down payment","the initial upfront payment for a house"],["landlord","a person who rents property to tenants"],["skyrocket","to increase very quickly"]]},
+  {title:"Sports playoffs season", blurb:"A reliable, easy small-talk topic almost anywhere.", questions:["Do you follow any sport closely?","Who do you think will win this season?","Did you watch the big game recently?"], vocab:[["underdog","a competitor expected to lose"],["nail-biter","a very close, tense game"],["front-runner","the competitor most likely to win"]]},
+  {title:"Weather extremes", blurb:"Unusual heat, storms, or seasons — always a safe opener.", questions:["Has the weather been unusual where you live lately?","Do you prefer hot or cold climates?","How do you deal with really hot or cold days?"], vocab:[["heatwave","a period of unusually hot weather"],["bundle up","to dress warmly"],["forecast","a prediction of future weather"]]},
+  {title:"AI-generated content", blurb:"AI writing, art, and video showing up everywhere.", questions:["Can you usually tell when something is AI-generated?","Does it bother you when content is made by AI?","Where do you think AI content is genuinely useful?"], vocab:[["authenticity","the quality of being genuine or real"],["deepfake","realistic fake media generated by AI"],["uncanny","strangely unsettling, not quite natural"]]},
+  {title:"Grocery shopping habits", blurb:"An easy, universal daily-life topic.", questions:["Do you plan meals ahead or shop day to day?","Have you started buying different brands to save money?","What's one food you always have in the house?"], vocab:[["stock up","to buy a large amount for later use"],["generic brand","a cheaper, unbranded version of a product"],["pantry staple","a basic food item always kept on hand"]]}
+];
+
+const PAIRS = {
+  "th vs s": [["think","sink"],["thin","fin"],["thought","sought"]],
+  "l vs n": [["light","night"],["low","no"],["lice","nice"]],
+  "l vs r": [["light","right"],["glass","grass"],["collect","correct"]],
+  "v vs w": [["vest","west"],["van","wan"],["vine","wine"]],
+  "final consonants": [["want","won"],["cold","coal"],["desk","dess"]],
+  "vowel length": [["ship","sheep"],["live","leave"],["bit","beat"]],
+  "word stress": [["record (noun)","record (verb)"],["present (noun)","present (verb)"],["object (noun)","object (verb)"]]
+};
+
+let state = {streak:0, lastActive:null, phraseIndex:0, topicIndex:0, usedCount:0, vocabProgress:{}, activity:[]};
+let mediaRecorder, audioChunks=[], recordedBlob=null, pronBlob=null;
+
+async function loadState(){
+  try{
+    const r = await window.storage.get('fluent-state');
+    if(r && r.value){
+      const saved = JSON.parse(r.value);
+      state = Object.assign({}, state, saved);
+    }
+  }catch(e){
+    console.error('primary load failed, checking local backup', e);
+    try{
+      const backup = localStorage.getItem('fluent-state-backup');
+      if(backup) state = Object.assign({}, state, JSON.parse(backup));
+    }catch(e2){ /* no backup available either, starting fresh */ }
+  }
+  if(typeof state.phraseIndex !== 'number' || state.phraseIndex < 0 || state.phraseIndex >= PHRASES.length) state.phraseIndex = 0;
+  if(typeof state.topicIndex !== 'number' || state.topicIndex < 0 || state.topicIndex >= TOPICS.length) state.topicIndex = 0;
+  if(!state.vocabProgress) state.vocabProgress = {};
+  if(!state.activity) state.activity = [];
+  checkStreak();
+  render();
+}
+let saveFailCount = 0;
+async function saveState(){
+  const payload = JSON.stringify(state);
+  try{
+    const result = await window.storage.set('fluent-state', payload);
+    if(!result) throw new Error('Storage set returned no result');
+    saveFailCount = 0;
+    setSyncStatus('ok');
+  }catch(e){
+    console.error('save failed, retrying once', e);
+    try{
+      await new Promise(r=>setTimeout(r, 600));
+      const retry = await window.storage.set('fluent-state', payload);
+      if(!retry) throw new Error('Retry returned no result');
+      saveFailCount = 0;
+      setSyncStatus('ok');
+    }catch(e2){
+      saveFailCount += 1;
+      console.error('save failed after retry, keeping progress in memory + local backup', e2);
+      try{ localStorage.setItem('fluent-state-backup', payload); }catch(e3){}
+      setSyncStatus('offline');
+    }
+  }
+}
+function setSyncStatus(status){
+  const el = document.getElementById('sync-status');
+  if(!el) return;
+  if(status === 'ok'){ el.style.display = 'none'; }
+  else{
+    el.style.display = 'inline-flex';
+    el.textContent = 'Progress saved on this device only — reconnecting…';
+  }
+}
+function todayStr(){ return new Date().toISOString().slice(0,10); }
+function checkStreak(){
+  const today = todayStr();
+  if(state.lastActive === today) return;
+  const yesterday = new Date(Date.now()-86400000).toISOString().slice(0,10);
+  if(state.lastActive === yesterday) state.streak += 1;
+  else if(state.lastActive) state.streak = 1;
+  else state.streak = 1;
+  state.lastActive = today;
+  state.phraseIndex = Math.floor(Math.random()*PHRASES.length);
+  const dayNum = Math.floor(Date.now()/86400000);
+  state.topicIndex = dayNum % TOPICS.length;
+  saveState();
+}
+
+function render(){
+  document.getElementById('streak-count').textContent = state.streak;
+  document.getElementById('stat-streak').textContent = state.streak;
+  document.getElementById('stat-used').textContent = state.usedCount;
+  const mastered = Object.values(state.vocabProgress).filter(v=>v.interval>=14).length;
+  document.getElementById('stat-words').textContent = mastered;
+  renderPhrase();
+  renderVocab();
+  renderTopics();
+  renderPronPairs();
+  renderActivity();
+  renderPresent();
+}
+
+function renderPresent(){
+  const sel = document.getElementById('struct-select');
+  if(sel.options.length===0){
+    STRUCTURES.forEach((s,i)=>{
+      const opt = document.createElement('option');
+      opt.value=i; opt.textContent=s.name;
+      sel.appendChild(opt);
+    });
+  }
+  const idx = Number(sel.value || 0);
+  const s = STRUCTURES[idx];
+  document.getElementById('struct-body').innerHTML = `
+    <ul class="step-list">${s.steps.map(step=>`<li>${step}</li>`).join('')}</ul>
+    <div class="tip" style="margin-top:14px;">Example: ${s.example} <span onclick="speak(\`${s.example.replace(/`/g,"'")}\`)" style="cursor:pointer; color:var(--gold);">&#9658;</span></div>
+  `;
+  document.getElementById('present-prompt').textContent = PRESENT_PROMPTS[presentPromptIndex];
+  document.getElementById('marketing-glossary').innerHTML = MARKETING_TERMS.map(w=>`
+    <div class="word-card">
+      <div class="word-head"><span class="word">${w.word}</span><span class="pos">${w.pos}</span></div>
+      <div class="ipa">${w.ipa} <span onclick="speak('${w.word}')" style="cursor:pointer; color:var(--gold);">&#9658;</span></div>
+      <div class="def">${w.def}</div>
+      <div class="ex">"${w.ex}"</div>
+    </div>`).join('');
+}
+document.getElementById('struct-select').addEventListener('change', renderPresent);
+document.getElementById('present-new').addEventListener('click', ()=>{
+  presentPromptIndex = (presentPromptIndex+1) % PRESENT_PROMPTS.length;
+  document.getElementById('present-prompt').textContent = PRESENT_PROMPTS[presentPromptIndex];
+  document.getElementById('present-feedback').innerHTML = '';
+  document.getElementById('present-timer').textContent = '';
+});
+
+function renderTopics(){
+  if(typeof state.topicIndex !== 'number' || state.topicIndex < 0 || state.topicIndex >= TOPICS.length) state.topicIndex = 0;
+  const t = TOPICS[state.topicIndex];
+  document.getElementById('topic-title').textContent = t.title;
+  document.getElementById('topic-blurb').textContent = t.blurb;
+  document.getElementById('topic-questions').innerHTML = '<ul class="q-list">' + t.questions.map(q=>`<li>${q}</li>`).join('') + '</ul>';
+  document.getElementById('topic-vocab').innerHTML = '<div class="chip-row">' + t.vocab.map(([w,d])=>`<span class="chip"><b>${w}</b> — ${d}</span>`).join('') + '</div>';
+  document.getElementById('topic-browse').innerHTML = TOPICS.map((topic,i)=>
+    `<div class="topic-link" onclick="setTopic(${i})">${topic.title}</div>`
+  ).join('');
+}
+function setTopic(i){
+  state.topicIndex = i;
+  saveState();
+  renderTopics();
+}
+
+function renderPhrase(){
+  if(typeof state.phraseIndex !== 'number' || state.phraseIndex < 0 || state.phraseIndex >= PHRASES.length) state.phraseIndex = 0;
+  const p = PHRASES[state.phraseIndex];
+  const tag = document.getElementById('today-tag');
+  tag.textContent = p.cat;
+  tag.className = 'tag ' + p.cat;
+  document.getElementById('today-phrase').textContent = p.text;
+  document.getElementById('today-ipa').textContent = p.ipa;
+  document.getElementById('today-tip').textContent = p.tip;
+  document.getElementById('today-transcript').innerHTML = '';
+}
+
+function renderVocab(){
+  const today = todayStr();
+  const due = VOCAB.filter(w=>{
+    const prog = state.vocabProgress[w.word];
+    if(!prog) return true;
+    return prog.due <= today;
+  });
+  const list = document.getElementById('vocab-list');
+  if(due.length===0){
+    list.innerHTML = '<div class="empty">All caught up. Come back tomorrow for more words.</div>';
+    return;
+  }
+  list.innerHTML = due.map(w=>{
+    const prog = state.vocabProgress[w.word];
+    const dueLabel = prog ? `next review in ${prog.interval} day${prog.interval>1?'s':''}` : 'new word';
+    return `<div class="word-card">
+      <div class="word-head"><span class="word">${w.word}</span><span class="pos">${w.pos}</span></div>
+      <div class="ipa">${w.ipa} <span onclick="speak('${w.word}')" style="cursor:pointer; color:var(--gold);">&#9658;</span></div>
+      <div class="def">${w.def}</div>
+      <div class="ex">"${w.ex}"</div>
+      <div class="row" style="margin-top:10px;">
+        <button class="btn" onclick="rateWord('${w.word}', false)">Still learning</button>
+        <button class="btn primary" onclick="rateWord('${w.word}', true)">I know this</button>
+      </div>
+      <div class="due">${dueLabel}</div>
+    </div>`;
+  }).join('');
+}
+
+const INTERVALS = [1,3,7,14,30];
+function rateWord(word, knew){
+  const prog = state.vocabProgress[word] || {interval:0};
+  let idx = INTERVALS.indexOf(prog.interval);
+  if(knew){ idx = Math.min(idx+1, INTERVALS.length-1); }
+  else { idx = 0; }
+  const interval = INTERVALS[idx];
+  const due = new Date(Date.now()+interval*86400000).toISOString().slice(0,10);
+  state.vocabProgress[word] = {interval, due};
+  logActivity(`${knew?'Learned':'Reviewing'} "${word}"`);
+  saveState();
+  renderVocab();
+  document.getElementById('stat-words').textContent = Object.values(state.vocabProgress).filter(v=>v.interval>=14).length;
+}
+
+function renderPronPairs(){
+  const sel = document.getElementById('pron-focus');
+  if(sel.options.length===0){
+    Object.keys(PAIRS).forEach(k=>{
+      const opt = document.createElement('option');
+      opt.value=k; opt.textContent=k;
+      sel.appendChild(opt);
+    });
+  }
+  const focus = sel.value || Object.keys(PAIRS)[0];
+  const pairs = PAIRS[focus];
+  document.getElementById('pron-pairs').innerHTML = pairs.map(([a,b])=>`
+    <div class="pair-row">
+      <div class="pair-words">
+        <span class="pair-word" onclick="speak('${a}')">${a}</span>
+        <span class="vs">vs</span>
+        <span class="pair-word" onclick="speak('${b}')">${b}</span>
+      </div>
+      <button class="btn" onclick="speak('${a}. ${b}.')">&#9658; play both</button>
+    </div>`).join('');
+}
+document.getElementById('pron-focus').addEventListener('change', renderPronPairs);
+
+const STRUCTURES = [
+  {name:"PREP (quick answers, Q&A)", steps:[
+    "Point — state your main idea in one sentence.",
+    "Reason — explain why, briefly.",
+    "Example — give one concrete example or piece of evidence.",
+    "Point — restate your main idea to close the loop."
+  ], example:"We should shift 15 percent of TV budget to paid social next quarter. Our MMM shows TV's marginal ROAS has dropped below 1.2, while social is still above 2.5. For example, last month's geo-experiment showed only a 3 percent incremental lift from the TV flight, versus 9 percent from the social test. So, reallocating budget will improve our overall ROAS."},
+  {name:"STAR (telling a work story)", steps:[
+    "Situation — set the scene in one or two sentences.",
+    "Task — what were you responsible for?",
+    "Action — what did you actually do?",
+    "Result — what happened, ideally with a number or outcome."
+  ], example:"Last quarter, our reported LTV to CAC ratio looked healthy, but paid growth was slowing. I was asked to find out why acquisition efficiency didn't match. I rebuilt the LTV model on cohort-based retention curves instead of a flat 12-month average, and cross-checked it against an MMM decomposition. The corrected LTV came in 18 percent lower, which explained the gap and led leadership to pause spend in two underperforming channels."},
+  {name:"Problem → Solution → Impact (project updates)", steps:[
+    "Problem — name the issue clearly, no jargon.",
+    "Solution — describe what you did or propose to do.",
+    "Impact — say what changes as a result, for the business or the team."
+  ], example:"Last-click attribution was crediting 70 percent of conversions to branded search, which overstated its real effectiveness. We built a Markov chain multi-touch attribution model instead. Budget shifted toward upper-funnel social and display, and blended ROAS improved by 12 percent over two quarters."},
+  {name:"Rule of three (persuasive moments)", steps:[
+    "Give your idea in exactly three parts — three reasons, three benefits, or three steps.",
+    "Say the number out loud: 'There are three reasons this matters.'",
+    "Land on the third point with the most weight — audiences remember it best."
+  ], example:"There are three reasons to invest in MMM over multi-touch attribution alone: it captures offline channels like TV that MTA misses entirely, it isn't broken by iOS privacy changes or cookie deprecation, and it directly answers the budget allocation question leadership actually asks."},
+  {name:"Signpost (longer presentations)", steps:[
+    "Tell them what you'll tell them — a one-line preview of your agenda.",
+    "Tell them — deliver the content, using clear transitions between sections.",
+    "Tell them what you told them — a short summary that repeats your key takeaway."
+  ], example:"Today I'll cover three things: what our MMM found, why TV's incremental lift came in lower than expected, and how we're reallocating budget next quarter. [content] So to sum up: TV is underperforming its share of the media mix, social has room to scale, and we're shifting 15 percent of budget starting next month."}
+];
+
+const MARKETING_TERMS = [
+  {word:"LTV", ipa:"/ɛl tiː viː/", pos:"lifetime value", def:"the total revenue a company expects from a customer over the full relationship, not just one purchase.", ex:"Our LTV to CAC ratio improved from 2 to 1, to 3.5 to 1, after the pricing change."},
+  {word:"CAC", ipa:"/siː eɪ siː/", pos:"customer acquisition cost", def:"the average cost to acquire one new paying customer.", ex:"Blended CAC crept up as we scaled paid social spend."},
+  {word:"MMM", ipa:"/ɛm ɛm ɛm/", pos:"marketing mix modeling", def:"a statistical model estimating how much each channel — TV, social, search — actually contributes to sales.", ex:"The MMM output suggested TV was underfunded relative to its efficiency."},
+  {word:"attribution", ipa:"/ˌætrɪˈbjuːʃən/", pos:"noun", def:"the method used to assign credit for a conversion to a specific channel or touchpoint.", ex:"Last-click attribution overstates the value of branded search."},
+  {word:"incrementality", ipa:"/ɪnˌkrɛmɛnˈtælɪti/", pos:"noun", def:"the true additional impact of a marketing action, beyond what would have happened anyway.", ex:"We need an incrementality test before doubling the budget on that channel."},
+  {word:"lift test", ipa:"/lɪft tɛst/", pos:"phrase", def:"an experiment, often with a holdout group, that measures a campaign's causal impact.", ex:"The lift test showed a 9 percent sales increase from the campaign."},
+  {word:"ROAS", ipa:"/roʊ æz/", pos:"return on ad spend", def:"revenue generated per dollar spent on advertising.", ex:"Paid search ROAS held steady even as we cut its budget by 20 percent."},
+  {word:"CPM", ipa:"/siː piː ɛm/", pos:"cost per mille", def:"the cost of one thousand ad impressions.", ex:"CPMs on that platform spiked during the holiday season."},
+  {word:"multi-touch attribution", ipa:"/ˈmʌlti tʌtʃ ˌætrɪˈbjuːʃən/", pos:"noun, abbreviated MTA", def:"a model that splits conversion credit across multiple touchpoints in a customer's journey.", ex:"MTA gave display a lot more credit than last-click ever did."},
+  {word:"geo-experiment", ipa:"/ˈdʒiːoʊ ɪkˈspɛrɪmənt/", pos:"noun", def:"a test that turns marketing on or off in different regions to measure causal lift.", ex:"We ran a geo-experiment across ten markets to isolate TV's true impact."},
+  {word:"halo effect", ipa:"/ˈheɪloʊ ɪˌfɛkt/", pos:"noun", def:"when marketing one product or channel indirectly boosts another, unrelated metric.", ex:"There's a halo effect from TV onto branded search volume."},
+  {word:"diminishing returns", ipa:"/dɪˈmɪnɪʃɪŋ rɪˈtɜːrnz/", pos:"phrase", def:"the point past which extra ad spend produces progressively smaller gains.", ex:"We hit diminishing returns on paid social above 40 thousand a week."},
+  {word:"share of voice", ipa:"/ʃɛr əv vɔɪs/", pos:"phrase, abbreviated SOV", def:"a brand's advertising presence relative to competitors in a given market.", ex:"Our share of voice dropped in Q3 as a competitor increased spend."}
+];
+
+const PRESENT_PROMPTS = [
+  "Explain your LTV model's key drivers to a non-technical VP in under a minute.",
+  "Present the headline result of a recent MMM analysis: which channel deserves more budget, and why?",
+  "Explain the difference between correlation and incrementality to a stakeholder who trusts last-click attribution.",
+  "Pitch a geo-experiment design to test TV's true incremental lift.",
+  "Explain why social platform attribution numbers don't match your MMM results, to a skeptical CFO.",
+  "Summarize a quarterly marketing performance review in 60 seconds, using STAR.",
+  "Defend a proposed budget shift away from TV toward paid social, in one minute.",
+  "Explain what 'diminishing returns' means for our paid search spend, to someone in sales.",
+  "Walk a creative team through why their campaign tested well but didn't show incremental lift.",
+  "Give a 60-second update on a project you're working on right now.",
+  "Introduce yourself and your role to someone new on your team.",
+  "Answer this tough question calmly: 'Why should we trust this plan will work?'"
+];
+let presentPromptIndex = 0;
+const PREFERRED_VOICES = [
+  "Google US English", "Samantha", "Microsoft Aria Online (Natural) - English (United States)",
+  "Microsoft Jenny Online (Natural) - English (United States)", "Google UK English Female",
+  "Victoria", "Microsoft Zira Desktop - English (United States)", "Karen", "Moira"
+];
+function pickVoice(){
+  const voices = window.speechSynthesis.getVoices();
+  if(!voices.length) return null;
+  for(const name of PREFERRED_VOICES){
+    const v = voices.find(v=>v.name===name);
+    if(v) return v;
+  }
+  const female = voices.find(v=>/female|Samantha|Victoria|Karen|Moira|Aria|Jenny|Zira/i.test(v.name) && v.lang.startsWith('en'));
+  if(female) return female;
+  return voices.find(v=>v.lang.startsWith('en')) || voices[0];
+}
+if('speechSynthesis' in window){
+  window.speechSynthesis.onvoiceschanged = ()=>{ cachedVoice = pickVoice(); };
+  cachedVoice = pickVoice();
+}
+function speak(text){
+  if(!('speechSynthesis' in window)){ alert('Speech synthesis is not supported in this browser.'); return; }
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'en-US'; u.rate = 0.92; u.pitch = 1.05;
+  if(!cachedVoice) cachedVoice = pickVoice();
+  if(cachedVoice) u.voice = cachedVoice;
+  window.speechSynthesis.speak(u);
+}
+
+function logActivity(text){
+  state.activity.unshift({text, time: new Date().toLocaleString()});
+  state.activity = state.activity.slice(0,15);
+}
+function renderActivity(){
+  const el = document.getElementById('activity-list');
+  if(state.activity.length===0){ el.innerHTML = 'Nothing yet — your activity will show up here.'; return; }
+  el.innerHTML = state.activity.map(a=>`${a.text} — ${a.time}`).join('<br>');
+}
+
+// tab switching
+document.querySelectorAll('nav button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('section').forEach(s=>s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+  });
+});
+
+document.getElementById('topic-next').addEventListener('click', ()=>{
+  state.topicIndex = (state.topicIndex+1) % TOPICS.length;
+  saveState();
+  renderTopics();
+});
+document.getElementById('today-listen').addEventListener('click', ()=>{
+  speak(PHRASES[state.phraseIndex].text);
+});
+document.getElementById('today-next').addEventListener('click', ()=>{
+  state.phraseIndex = (state.phraseIndex+1) % PHRASES.length;
+  saveState();
+  renderPhrase();
+});
+document.getElementById('log-used').addEventListener('click', ()=>{
+  state.usedCount += 1;
+  logActivity(`Used the phrase: "${PHRASES[state.phraseIndex].text}"`);
+  document.getElementById('log-feedback').textContent = "Nice — logged. That's real practice, not just study.";
+  saveState();
+  render();
+});
+document.getElementById('log-skip').addEventListener('click', ()=>{
+  document.getElementById('log-feedback').textContent = "No problem — try it next time it comes up naturally.";
+});
+document.getElementById('reset-btn').addEventListener('click', async ()=>{
+  if(!confirm('This clears all saved progress on this device. Continue?')) return;
+  state = {streak:0, lastActive:null, phraseIndex:0, usedCount:0, vocabProgress:{}, activity:[]};
+  await saveState();
+  checkStreak();
+  render();
+});
+
+// recording setup (shared helper)
+function setupRecorder(targetText, waveId, transcriptId, playBtnId, onDone){
+  let stream, recognition, recognizedText = '';
+  let bars = [];
+  const waveEl = document.getElementById(waveId);
+  return async function startRecording(button){
+    if(button.classList.contains('active')){
+      button.classList.remove('active');
+      button.textContent = button.dataset.label || '● Record';
+      if(mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+      if(recognition) recognition.stop();
+      if(stream) stream.getTracks().forEach(t=>t.stop());
+      return;
+    }
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    }catch(e){
+      alert('Microphone access is needed to record. Please allow microphone permission.');
+      return;
+    }
+    button.classList.add('active');
+    button.dataset.label = button.textContent;
+    button.textContent = '● Stop';
+    waveEl.style.display = 'flex';
+    waveEl.innerHTML = '';
+    for(let i=0;i<24;i++){ const b=document.createElement('div'); b.className='bar'; waveEl.appendChild(b); bars.push(b); }
+    const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    const src = audioCtx.createMediaStreamSource(stream);
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 64;
+    src.connect(analyser);
+    const data = new Uint8Array(analyser.frequencyBinCount);
+    let animId;
+    function animate(){
+      analyser.getByteFrequencyData(data);
+      bars.forEach((b,i)=>{ b.style.height = Math.max(6, data[i%data.length]/3) + 'px'; });
+      animId = requestAnimationFrame(animate);
+    }
+    animate();
+
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = e=>audioChunks.push(e.data);
+    mediaRecorder.onstop = ()=>{
+      cancelAnimationFrame(animId);
+      audioCtx.close();
+      waveEl.style.display='none';
+      const blob = new Blob(audioChunks, {type:'audio/webm'});
+      if(playBtnId){
+        const pb = document.getElementById(playBtnId);
+        pb.disabled = false;
+        pb.onclick = ()=>{ new Audio(URL.createObjectURL(blob)).play(); };
+      }
+      onDone(recognizedText, blob);
+    };
+    mediaRecorder.start();
+
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(SR){
+      recognition = new SR();
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.onresult = (e)=>{ recognizedText = e.results[0][0].transcript; };
+      recognition.onerror = ()=>{};
+      try{ recognition.start(); }catch(e){}
+    }
+  };
+}
+
+function diffText(target, heard){
+  if(!heard) return '<span class="mismatch">No speech detected — try again, speaking clearly.</span>';
+  const t = target.toLowerCase().replace(/[.,!?]/g,'').split(/\s+/);
+  const h = heard.toLowerCase().replace(/[.,!?]/g,'').split(/\s+/);
+  const hSet = new Set(h);
+  const marked = t.map(w=> hSet.has(w) ? `<span class="match">${w}</span>` : `<span class="mismatch">${w}</span>`).join(' ');
+  return `Heard: "${heard}"<br>Target: ${marked}`;
+}
+
+const startTodayRecording = setupRecorder(null, 'today-wave', 'today-transcript', null, (heard)=>{
+  const target = PHRASES[state.phraseIndex].text;
+  document.getElementById('today-transcript').innerHTML = `<div class="transcript">${diffText(target, heard)}</div>`;
+});
+document.getElementById('today-record').addEventListener('click', function(){
+  startTodayRecording(this);
+});
+
+const startPronRecording = setupRecorder(null, 'pron-wave', 'pron-transcript', 'pron-play', (heard)=>{
+  const sel = document.getElementById('pron-focus').value || Object.keys(PAIRS)[0];
+  const pairWords = PAIRS[sel].flat().join(' / ');
+  document.getElementById('pron-transcript').innerHTML = `<div class="transcript">Heard: "${heard||'(nothing detected)'}"<br><span class="muted">Comparing against: ${pairWords}</span></div>`;
+});
+document.getElementById('pron-record').addEventListener('click', function(){
+  startPronRecording(this);
+});
+
+const FILLER_WORDS = ["um","uh","umm","uhh","like","you know","actually","basically","kind of","sort of","so yeah","i mean"];
+let presentRecorder, presentStream, presentStart, presentTimerInterval, presentRecognizedText = '';
+document.getElementById('present-record').addEventListener('click', async function(){
+  const button = this;
+  if(button.classList.contains('active')){
+    button.classList.remove('active');
+    button.textContent = '● Record (aim for 30–60s)';
+    clearInterval(presentTimerInterval);
+    if(presentRecorder && presentRecorder.state !== 'inactive') presentRecorder.stop();
+    if(presentStream) presentStream.getTracks().forEach(t=>t.stop());
+    return;
+  }
+  try{
+    presentStream = await navigator.mediaDevices.getUserMedia({audio:true});
+  }catch(e){
+    alert('Microphone access is needed to record. Please allow microphone permission.');
+    return;
+  }
+  button.classList.add('active');
+  button.textContent = '● Stop';
+  presentRecognizedText = '';
+  const waveEl = document.getElementById('present-wave');
+  waveEl.style.display = 'flex';
+  waveEl.innerHTML = '';
+  const bars = [];
+  for(let i=0;i<24;i++){ const b=document.createElement('div'); b.className='bar'; waveEl.appendChild(b); bars.push(b); }
+  const audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  const src = audioCtx.createMediaStreamSource(presentStream);
+  const analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 64;
+  src.connect(analyser);
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  let animId;
+  (function animate(){ analyser.getByteFrequencyData(data); bars.forEach((b,i)=>{ b.style.height = Math.max(6, data[i%data.length]/3) + 'px'; }); animId = requestAnimationFrame(animate); })();
+
+  presentStart = Date.now();
+  document.getElementById('present-timer').textContent = '0:00';
+  presentTimerInterval = setInterval(()=>{
+    const secs = Math.floor((Date.now()-presentStart)/1000);
+    document.getElementById('present-timer').textContent = Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0');
+  }, 500);
+
+  const chunks = [];
+  presentRecorder = new MediaRecorder(presentStream);
+  presentRecorder.ondataavailable = e=>chunks.push(e.data);
+  presentRecorder.onstop = ()=>{
+    cancelAnimationFrame(animId);
+    audioCtx.close();
+    waveEl.style.display = 'none';
+    clearInterval(presentTimerInterval);
+    const durationSec = Math.max(1, Math.round((Date.now()-presentStart)/1000));
+    analyzePresentation(presentRecognizedText, durationSec);
+  };
+  presentRecorder.start();
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(SR){
+    const recognition = new SR();
+    recognition.lang = 'en-US';
+    recognition.continuous = true;
+    recognition.interimResults = false;
+    recognition.onresult = (e)=>{
+      let text = '';
+      for(let i=0;i<e.results.length;i++) text += e.results[i][0].transcript + ' ';
+      presentRecognizedText = text.trim();
+    };
+    recognition.onerror = ()=>{};
+    try{ recognition.start(); presentRecorder.recognitionRef = recognition; }catch(e){}
+    presentRecorder.addEventListener('stop', ()=>{ try{ recognition.stop(); }catch(e){} });
+  }
+});
+
+function analyzePresentation(transcript, durationSec){
+  const el = document.getElementById('present-feedback');
+  if(!transcript){
+    el.innerHTML = `<div class="transcript">No speech was detected. If speech recognition isn't supported in your browser, that's fine — use the timer and your own ear to judge pace instead.</div>`;
+    return;
+  }
+  const words = transcript.trim().split(/\s+/).filter(Boolean);
+  const wordCount = words.length;
+  const wpm = Math.round(wordCount / (durationSec/60));
+  const lower = transcript.toLowerCase();
+  let fillerCount = 0;
+  const foundFillers = {};
+  FILLER_WORDS.forEach(f=>{
+    const re = new RegExp('\\b'+f.replace(/ /g,'\\s+')+'\\b','g');
+    const matches = lower.match(re);
+    if(matches){ fillerCount += matches.length; foundFillers[f] = matches.length; }
+  });
+  let paceNote = 'Good pace for a presentation.';
+  if(wpm < 100) paceNote = 'A little slow — fine for emphasis, but watch for hesitation.';
+  if(wpm > 170) paceNote = 'Quite fast — try slowing down at key points so it lands.';
+  const fillerChips = Object.keys(foundFillers).length
+    ? '<div class="chip-row">' + Object.entries(foundFillers).map(([w,c])=>`<span class="chip"><b>${w}</b> × ${c}</span>`).join('') + '</div>'
+    : '<div class="muted" style="font-size:13px;">No common filler words caught — nice and clean.</div>';
+  el.innerHTML = `
+    <div class="feedback-grid">
+      <div class="fb-stat"><div class="fb-num">${durationSec}s</div><div class="fb-label">duration</div></div>
+      <div class="fb-stat"><div class="fb-num">${wpm}</div><div class="fb-label">words / min</div></div>
+      <div class="fb-stat"><div class="fb-num">${fillerCount}</div><div class="fb-label">filler words</div></div>
+    </div>
+    <div class="tip">${paceNote} A natural conversational pace is roughly 120–160 words per minute.</div>
+    ${fillerChips}
+    <div class="transcript" style="margin-top:10px;">Heard: "${transcript}"</div>
+    <div class="footnote">Note: some browsers automatically filter out "um" and "uh" before transcribing, so a low count here doesn't always mean none were spoken — trust your own ear too.</div>
+  `;
+  logActivity(`Practiced a pitch — ${wpm} wpm, ${fillerCount} filler words`);
+  saveState();
+}
+
+loadState();
+</script>
+</body>
+</html>
