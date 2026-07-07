@@ -123,6 +123,10 @@
   .fb-num{font-family:'Fraunces',serif; font-size:20px; color:var(--gold);}
   .fb-label{font-size:11px; color:var(--muted); text-transform:uppercase;}
   @media (max-width:480px){.stat-grid{grid-template-columns:repeat(3,1fr); gap:8px;} .stat-num{font-size:20px;}}
+  input[type="password"]{
+    background:var(--card-2); color:var(--text); border:1px solid var(--border);
+    border-radius:8px; padding:8px 10px; font-family:'Inter'; font-size:13px; width:100%; margin-bottom:8px;
+  }
 </style>
 </head>
 <body>
@@ -252,6 +256,19 @@
     <div class="card">
       <h3>Recent activity</h3>
       <div id="activity-list" class="footnote"></div>
+    </div>
+    <div class="card">
+      <h3>Sync recordings across devices</h3>
+      <p class="muted" style="font-size:13px; margin:8px 0 12px;">After you record, a "Save to sync" button appears — tap it to upload to GitHub. On any other device, an "Load synced" button lets you play it back. One-time setup: paste a GitHub token with <span style="font-family:'IBM Plex Mono'; font-size:11px;">public_repo</span> scope.</p>
+      <div id="pat-connected" style="display:none;">
+        <div style="color:var(--sage); font-size:13px; margin-bottom:10px;">&#10003; Token saved on this device.</div>
+        <button class="btn" id="pat-remove">Remove token</button>
+      </div>
+      <div id="pat-form">
+        <input type="password" id="pat-input" placeholder="Paste GitHub token (ghp_...)">
+        <button class="btn primary" id="pat-save">Save token</button>
+      </div>
+      <div id="sync-msg" class="footnote" style="margin-top:8px;"></div>
     </div>
     <div class="card">
       <h3>Reset progress</h3>
@@ -667,6 +684,120 @@ function renderActivity(){
   el.innerHTML = state.activity.map(a=>`${a.text} — ${a.time}`).join('<br>');
 }
 
+// ── GitHub recording sync ──────────────────────────────────────────────────
+const GH = {owner:'yanmeilu777-png', repo:'EnglishSpeaking', branch:'main'};
+function ghPat(){ return localStorage.getItem('fluent-gh-pat')||''; }
+async function ghFileSha(path){
+  try{
+    const r = await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${path}`,
+      {headers:{Authorization:`token ${ghPat()}`}});
+    if(r.status===404) return null;
+    return r.ok ? (await r.json()).sha : null;
+  }catch(){ return null; }
+}
+async function blobToB64(blob){
+  return new Promise((res,rej)=>{
+    const fr = new FileReader();
+    fr.onload = ()=>res(fr.result.split(',')[1]);
+    fr.onerror = rej;
+    fr.readAsDataURL(blob);
+  });
+}
+async function ghPutFile(path, b64, message){
+  const sha = await ghFileSha(path);
+  const body = {message, content:b64, branch:GH.branch};
+  if(sha) body.sha = sha;
+  const r = await fetch(`https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${path}`,{
+    method:'PUT', headers:{Authorization:`token ${ghPat()}`,'Content-Type':'application/json'},
+    body:JSON.stringify(body)
+  });
+  return r.ok;
+}
+async function saveRecordingToGH(ctx, blob){
+  if(!ghPat()) return false;
+  const ext = (blob.type.includes('mp4')||blob.type.includes('aac')) ? 'mp4' : 'webm';
+  const filePath = `recordings/${ctx}.${ext}`;
+  const b64 = await blobToB64(blob);
+  const ok = await ghPutFile(filePath, b64, `Update ${ctx} recording`);
+  if(!ok) return false;
+  const metaPath = 'recordings/meta.json';
+  let meta = {};
+  try{
+    const r = await fetch(`https://raw.githubusercontent.com/${GH.owner}/${GH.repo}/${GH.branch}/${metaPath}?t=${Date.now()}`);
+    if(r.ok) meta = await r.json();
+  }catch(e){}
+  meta[ctx] = {path:filePath, mime:blob.type, saved:new Date().toISOString()};
+  await ghPutFile(metaPath, btoa(JSON.stringify(meta,null,2)), 'Update sync metadata');
+  return true;
+}
+async function loadSyncMeta(){
+  if(!ghPat()) return null;
+  try{
+    const r = await fetch(`https://raw.githubusercontent.com/${GH.owner}/${GH.repo}/${GH.branch}/recordings/meta.json?t=${Date.now()}`);
+    return r.ok ? await r.json() : null;
+  }catch(){ return null; }
+}
+function ghRawUrl(path){ return `https://raw.githubusercontent.com/${GH.owner}/${GH.repo}/${GH.branch}/${path}`; }
+
+function addSyncBtn(container, ctx, blob){
+  if(!ghPat()) return;
+  const btn = document.createElement('button');
+  btn.className = 'btn'; btn.style.cssText = 'margin-top:8px; font-size:12px;';
+  btn.innerHTML = '&#9729;&#xFE0E; Save to sync';
+  btn.onclick = async ()=>{
+    btn.disabled = true; btn.textContent = 'Saving…';
+    const ok = await saveRecordingToGH(ctx, blob);
+    btn.textContent = ok ? '✓ Synced' : '⚠ Sync failed — check token';
+    if(ok) btn.style.color = 'var(--sage)';
+  };
+  container.appendChild(btn);
+}
+function addLoadSyncedBtn(container, ctx, meta){
+  if(!meta || !meta[ctx]) return;
+  const saved = new Date(meta[ctx].saved).toLocaleDateString();
+  const btn = document.createElement('button');
+  btn.className = 'btn'; btn.style.cssText = 'margin-top:8px; font-size:12px;';
+  btn.innerHTML = `&#9729;&#xFE0E; Play synced (${saved})`;
+  btn.onclick = ()=> new Audio(ghRawUrl(meta[ctx].path)).play();
+  container.appendChild(btn);
+}
+
+let syncMeta = null;
+async function initSync(){
+  const pat = ghPat();
+  document.getElementById('pat-form').style.display = pat ? 'none' : 'block';
+  document.getElementById('pat-connected').style.display = pat ? 'block' : 'none';
+  if(pat){
+    syncMeta = await loadSyncMeta();
+    if(syncMeta){
+      // inject "Play synced" buttons into each recording context
+      [['today','today-transcript'],['pron','pron-transcript'],
+       ['topic','topic-playback'],['presentation','present-feedback']].forEach(([ctx,id])=>{
+        const el = document.getElementById(id);
+        if(el) addLoadSyncedBtn(el, ctx, syncMeta);
+      });
+    }
+  }
+}
+document.getElementById('pat-save').addEventListener('click', ()=>{
+  const v = document.getElementById('pat-input').value.trim();
+  const msg = document.getElementById('sync-msg');
+  if(!v){ msg.textContent = 'Please paste a token first.'; return; }
+  localStorage.setItem('fluent-gh-pat', v);
+  document.getElementById('pat-input').value = '';
+  document.getElementById('pat-form').style.display = 'none';
+  document.getElementById('pat-connected').style.display = 'block';
+  msg.textContent = 'Token saved. Record something and tap "Save to sync".';
+});
+document.getElementById('pat-remove').addEventListener('click', ()=>{
+  localStorage.removeItem('fluent-gh-pat');
+  document.getElementById('pat-form').style.display = 'block';
+  document.getElementById('pat-connected').style.display = 'none';
+  syncMeta = null;
+  document.getElementById('sync-msg').textContent = '';
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 // tab switching
 document.querySelectorAll('nav button').forEach(btn=>{
   btn.addEventListener('click', ()=>{
@@ -772,7 +903,7 @@ function setupRecorder(targetText, waveId, transcriptId, playBtnId, onDone){
       cancelAnimationFrame(animId);
       src.disconnect();
       waveEl.style.display='none';
-      const blob = new Blob(audioChunks, {type:'audio/webm'});
+      const blob = new Blob(audioChunks, {type: mediaRecorder.mimeType || 'audio/webm'});
       if(playBtnId){
         const pb = document.getElementById(playBtnId);
         pb.disabled = false;
@@ -803,18 +934,22 @@ function diffText(target, heard){
   return `Heard: "${heard}"<br>Target: ${marked}`;
 }
 
-const startTodayRecording = setupRecorder(null, 'today-wave', 'today-transcript', null, (heard)=>{
+const startTodayRecording = setupRecorder(null, 'today-wave', 'today-transcript', null, (heard, blob)=>{
   const target = PHRASES[state.phraseIndex].text;
-  document.getElementById('today-transcript').innerHTML = `<div class="transcript">${diffText(target, heard)}</div>`;
+  const el = document.getElementById('today-transcript');
+  el.innerHTML = `<div class="transcript">${diffText(target, heard)}</div>`;
+  if(blob) addSyncBtn(el, 'today', blob);
 });
 document.getElementById('today-record').addEventListener('click', function(){
   startTodayRecording(this);
 });
 
-const startPronRecording = setupRecorder(null, 'pron-wave', 'pron-transcript', 'pron-play', (heard)=>{
+const startPronRecording = setupRecorder(null, 'pron-wave', 'pron-transcript', 'pron-play', (heard, blob)=>{
   const sel = document.getElementById('pron-focus').value || Object.keys(PAIRS)[0];
   const pairWords = PAIRS[sel].flat().join(' / ');
-  document.getElementById('pron-transcript').innerHTML = `<div class="transcript">Heard: "${heard||'(nothing detected)'}"<br><span class="muted">Comparing against: ${pairWords}</span></div>`;
+  const el = document.getElementById('pron-transcript');
+  el.innerHTML = `<div class="transcript">Heard: "${heard||'(nothing detected)'}"<br><span class="muted">Comparing against: ${pairWords}</span></div>`;
+  if(blob) addSyncBtn(el, 'pron', blob);
 });
 document.getElementById('pron-record').addEventListener('click', function(){
   startPronRecording(this);
@@ -830,12 +965,12 @@ const startTopicRecording = setupRecorder(null, 'topic-wave', null, null, (heard
   const pb = document.getElementById('topic-playback');
   const url = URL.createObjectURL(blob);
   pb.innerHTML = '';
-  const btn = document.createElement('button');
-  btn.className = 'btn';
-  btn.style.marginTop = '10px';
-  btn.innerHTML = '&#9658; Play back';
-  btn.onclick = ()=> new Audio(url).play();
-  pb.appendChild(btn);
+  const playBtn = document.createElement('button');
+  playBtn.className = 'btn'; playBtn.style.marginTop = '10px';
+  playBtn.innerHTML = '&#9658; Play back';
+  playBtn.onclick = ()=> new Audio(url).play();
+  pb.appendChild(playBtn);
+  addSyncBtn(pb, 'topic', blob);
 });
 document.getElementById('topic-record').addEventListener('click', function(){
   startTopicRecording(this);
@@ -895,7 +1030,8 @@ document.getElementById('present-record').addEventListener('click', async functi
     waveEl.style.display = 'none';
     clearInterval(presentTimerInterval);
     const durationSec = Math.max(1, Math.round((Date.now()-presentStart)/1000));
-    analyzePresentation(presentRecognizedText, durationSec);
+    const blob = new Blob(chunks, {type: presentRecorder.mimeType || 'audio/webm'});
+    analyzePresentation(presentRecognizedText, durationSec, blob);
   };
   presentRecorder.start();
 
@@ -916,7 +1052,7 @@ document.getElementById('present-record').addEventListener('click', async functi
   }
 });
 
-function analyzePresentation(transcript, durationSec){
+function analyzePresentation(transcript, durationSec, blob){
   const el = document.getElementById('present-feedback');
   if(!transcript){
     el.innerHTML = `<div class="transcript">No speech was detected. If speech recognition isn't supported in your browser, that's fine — use the timer and your own ear to judge pace instead.</div>`;
@@ -952,9 +1088,12 @@ function analyzePresentation(transcript, durationSec){
   `;
   logActivity(`Practiced a pitch — ${wpm} wpm, ${fillerCount} filler words`);
   saveState();
+  if(blob) addSyncBtn(el, 'presentation', blob);
 }
+// analyzePresentation accepts optional blob as third arg for GitHub sync
 
 loadState();
+initSync();
 </script>
 </body>
 </html>
