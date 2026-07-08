@@ -516,6 +516,7 @@ function renderPhrase(){
   document.getElementById('today-transcript').innerHTML = '';
 }
 
+function safeId(w){ return w.replace(/\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,''); }
 function renderVocab(){
   const today = todayStr();
   const due = VOCAB.filter(w=>{
@@ -539,7 +540,10 @@ function renderVocab(){
       <div class="row" style="margin-top:10px;">
         <button class="btn" onclick="rateWord('${w.word}', false)">Still learning</button>
         <button class="btn primary" onclick="rateWord('${w.word}', true)">I know this</button>
+        <button class="btn rec" id="vr-${safeId(w.word)}" onclick="startVocabRec(this,'${safeId(w.word)}','${w.word}')">&#9679; Record</button>
       </div>
+      <div class="waveform" id="vw-${safeId(w.word)}" style="display:none;"></div>
+      <div id="vp-${safeId(w.word)}"></div>
       <div class="due">${dueLabel}</div>
     </div>`;
   }).join('');
@@ -762,6 +766,18 @@ function addLoadSyncedBtn(container, ctx, meta){
   container.appendChild(btn);
 }
 
+function addDownloadBtn(container, blob, filename){
+  const btn = document.createElement('button');
+  btn.className = 'btn'; btn.style.cssText = 'margin-top:8px; font-size:12px;';
+  btn.innerHTML = '&#8595; Save to device';
+  btn.onclick = ()=>{
+    const ext = (blob.type.includes('mp4')||blob.type.includes('aac')) ? 'mp4' : 'webm';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = filename+'.'+ext; a.click();
+  };
+  container.appendChild(btn);
+}
+
 let syncMeta = null;
 async function initSync(){
   const pat = ghPat();
@@ -938,7 +954,7 @@ const startTodayRecording = setupRecorder(null, 'today-wave', 'today-transcript'
   const target = PHRASES[state.phraseIndex].text;
   const el = document.getElementById('today-transcript');
   el.innerHTML = `<div class="transcript">${diffText(target, heard)}</div>`;
-  if(blob) addSyncBtn(el, 'today', blob);
+  if(blob){ addDownloadBtn(el, blob, 'today-practice'); addSyncBtn(el, 'today', blob); }
 });
 document.getElementById('today-record').addEventListener('click', function(){
   startTodayRecording(this);
@@ -949,7 +965,7 @@ const startPronRecording = setupRecorder(null, 'pron-wave', 'pron-transcript', '
   const pairWords = PAIRS[sel].flat().join(' / ');
   const el = document.getElementById('pron-transcript');
   el.innerHTML = `<div class="transcript">Heard: "${heard||'(nothing detected)'}"<br><span class="muted">Comparing against: ${pairWords}</span></div>`;
-  if(blob) addSyncBtn(el, 'pron', blob);
+  if(blob){ addDownloadBtn(el, blob, 'pronunciation-practice'); addSyncBtn(el, 'pron', blob); }
 });
 document.getElementById('pron-record').addEventListener('click', function(){
   startPronRecording(this);
@@ -970,11 +986,59 @@ const startTopicRecording = setupRecorder(null, 'topic-wave', null, null, (heard
   playBtn.innerHTML = '&#9658; Play back';
   playBtn.onclick = ()=> new Audio(url).play();
   pb.appendChild(playBtn);
+  addDownloadBtn(pb, blob, 'topic-practice');
   addSyncBtn(pb, 'topic', blob);
 });
 document.getElementById('topic-record').addEventListener('click', function(){
   startTopicRecording(this);
 });
+
+let vocabMR, vocabStream;
+function startVocabRec(btn, sid, word){
+  if(btn.classList.contains('active')){
+    btn.classList.remove('active'); btn.textContent='● Record';
+    if(vocabMR && vocabMR.state!=='inactive') vocabMR.stop();
+    if(vocabStream) vocabStream.getTracks().forEach(t=>t.stop());
+    activeRecordButton=null; return;
+  }
+  if(activeRecordButton && activeRecordButton!==btn) activeRecordButton.click();
+  navigator.mediaDevices.getUserMedia({audio:true}).then(stream=>{
+    vocabStream=stream;
+    btn.classList.add('active'); btn.dataset.label=btn.textContent; btn.textContent='● Stop';
+    activeRecordButton=btn;
+    const waveEl=document.getElementById('vw-'+sid);
+    const bars=[];
+    if(waveEl){ waveEl.style.display='flex'; waveEl.innerHTML='';
+      for(let i=0;i<24;i++){const b=document.createElement('div');b.className='bar';waveEl.appendChild(b);bars.push(b);}
+    }
+    const audioCtx=getSharedAudioCtx();
+    const src=audioCtx.createMediaStreamSource(stream);
+    const analyser=audioCtx.createAnalyser(); analyser.fftSize=64;
+    src.connect(analyser);
+    const data=new Uint8Array(analyser.frequencyBinCount);
+    let animId;
+    function animate(){ analyser.getByteFrequencyData(data); bars.forEach((b,i)=>{b.style.height=Math.max(6,data[i%data.length]/3)+'px';}); animId=requestAnimationFrame(animate); }
+    if(bars.length) animate();
+    const chunks=[];
+    vocabMR=new MediaRecorder(stream);
+    vocabMR.ondataavailable=e=>chunks.push(e.data);
+    vocabMR.onstop=()=>{
+      cancelAnimationFrame(animId); src.disconnect();
+      if(waveEl) waveEl.style.display='none';
+      const blob=new Blob(chunks,{type:vocabMR.mimeType||'audio/webm'});
+      const pbEl=document.getElementById('vp-'+sid);
+      if(pbEl){ pbEl.innerHTML='';
+        const url=URL.createObjectURL(blob);
+        const pb=document.createElement('button'); pb.className='btn'; pb.style.marginTop='8px';
+        pb.innerHTML='&#9658; Play back'; pb.onclick=()=>new Audio(url).play();
+        pbEl.appendChild(pb);
+        addDownloadBtn(pbEl, blob, word+'-practice');
+        addSyncBtn(pbEl,'vocab-'+sid,blob);
+      }
+    };
+    vocabMR.start();
+  }).catch(()=>alert('Microphone access is needed to record. Please allow microphone permission.'));
+}
 
 const FILLER_WORDS = ["um","uh","umm","uhh","like","you know","actually","basically","kind of","sort of","so yeah","i mean"];
 let presentRecorder, presentStream, presentStart, presentTimerInterval, presentRecognizedText = '';
@@ -1088,7 +1152,7 @@ function analyzePresentation(transcript, durationSec, blob){
   `;
   logActivity(`Practiced a pitch — ${wpm} wpm, ${fillerCount} filler words`);
   saveState();
-  if(blob) addSyncBtn(el, 'presentation', blob);
+  if(blob){ addDownloadBtn(el, blob, 'presentation-practice'); addSyncBtn(el, 'presentation', blob); }
 }
 // analyzePresentation accepts optional blob as third arg for GitHub sync
 
