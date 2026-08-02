@@ -4,17 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fluent — daily English practice</title>
-<script>
-window.onerror = function(msg, src, line){
-  var d = document.getElementById('_err') || document.createElement('div');
-  d.id = '_err';
-  d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;padding:14px;font-size:13px;z-index:99999;font-family:monospace;white-space:pre-wrap;';
-  d.textContent = 'JS ERROR line ' + line + ':\n' + msg;
-  if(document.body) document.body.appendChild(d);
-  else document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(d); });
-};
-</script>
-<noscript><p style="color:red;padding:20px">JavaScript is disabled — please enable it to use Fluent.</p></noscript>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -965,7 +954,16 @@ const startTodayRecording = setupRecorder(null, 'today-wave', 'today-transcript'
   const target = PHRASES[state.phraseIndex].text;
   const el = document.getElementById('today-transcript');
   el.innerHTML = `<div class="transcript">${diffText(target, heard)}</div>`;
-  if(blob){ addDownloadBtn(el, blob, 'today-practice'); addSyncBtn(el, 'today', blob); }
+  if(blob){
+    const url = URL.createObjectURL(blob);
+    const pb = document.createElement('button');
+    pb.className = 'btn'; pb.style.marginTop = '8px';
+    pb.innerHTML = '&#9658; Play back';
+    pb.onclick = ()=> new Audio(url).play();
+    el.appendChild(pb);
+    addDownloadBtn(el, blob, 'today-practice');
+    addSyncBtn(el, 'today', blob);
+  }
 });
 document.getElementById('today-record').addEventListener('click', function(){
   startTodayRecording(this);
