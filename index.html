@@ -272,6 +272,18 @@
       <div id="sync-msg" class="footnote" style="margin-top:8px;"></div>
     </div>
     <div class="card">
+      <h3>AI Pronunciation Coach</h3>
+      <p class="muted" style="font-size:13px; margin:8px 0 12px;">After recording, tap "Get AI coaching" for personalised tips. Needs your Anthropic API key — it stays on this device only, never uploaded anywhere. Get a key at <span style="font-family:'IBM Plex Mono';font-size:11px;">console.anthropic.com</span>.</p>
+      <div id="claude-connected" style="display:none;">
+        <div style="color:var(--sage); font-size:13px; margin-bottom:10px;">&#10003; AI Coach ready.</div>
+        <button class="btn" id="claude-key-remove">Remove key</button>
+      </div>
+      <div id="claude-key-form">
+        <input type="password" id="claude-key-input" placeholder="Paste Anthropic API key (sk-ant-...)">
+        <button class="btn primary" id="claude-key-save" style="margin-top:8px;">Save key</button>
+      </div>
+    </div>
+    <div class="card">
       <h3>Reset progress</h3>
       <p class="muted" style="font-size:13px;">Clears all saved data on this device.</p>
       <button class="btn" id="reset-btn" style="margin-top:8px;">Clear all data</button>
@@ -806,6 +818,59 @@ function addDownloadBtn(container, blob, filename){
   container.appendChild(btn);
 }
 
+function claudeKey(){ return localStorage.getItem('fluent-claude-key')||''; }
+async function getCoaching(targetText, ipa, contextType){
+  const key = claudeKey();
+  if(!key) return null;
+  const prompt = `I am a Mandarin-speaking English learner. I just recorded myself saying this ${contextType}:
+
+"${targetText}"
+IPA: ${ipa}
+
+Give me exactly 3 short coaching tips (1–2 sentences each) focused on:
+1. Stress — which word(s) and syllable to emphasise most
+2. Sounds — any sounds commonly hard for Mandarin speakers in this text (th, r, v, l vs n, final consonants, vowel length)
+3. Rhythm — how the words should link or flow together naturally
+
+Be specific to this exact text. Be encouraging. Number each tip.`;
+  try{
+    const r = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        'anthropic-dangerous-direct-browser-use': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
+        messages:[{role:'user', content: prompt}]
+      })
+    });
+    if(!r.ok) return '⚠ API error — check your key in Progress tab.';
+    const d = await r.json();
+    return d.content[0].text;
+  }catch(e){ return '⚠ Could not connect. Check your internet and API key.'; }
+}
+function addCoachBtn(container, targetText, ipa, contextType){
+  if(!claudeKey()) return;
+  const btn = document.createElement('button');
+  btn.className='btn'; btn.style.cssText='margin-top:8px; font-size:13px;';
+  btn.textContent='✦ Get AI coaching';
+  btn.onclick = async ()=>{
+    btn.textContent='Thinking…'; btn.disabled=true;
+    const tip = await getCoaching(targetText, ipa, contextType);
+    btn.remove();
+    const box = document.createElement('div');
+    box.className='transcript'; box.style.marginTop='10px';
+    box.innerHTML='<strong style="color:var(--gold)">AI Coach</strong><br><br>'
+      + (tip||'No response.').replace(/\n/g,'<br>');
+    container.appendChild(box);
+  };
+  container.appendChild(btn);
+}
+
 let syncMeta = null;
 async function initSync(){
   const pat = ghPat();
@@ -840,6 +905,24 @@ document.getElementById('pat-remove').addEventListener('click', ()=>{
   syncMeta = null;
   document.getElementById('sync-msg').textContent = '';
 });
+document.getElementById('claude-key-save').addEventListener('click', ()=>{
+  const v = document.getElementById('claude-key-input').value.trim();
+  if(!v) return;
+  localStorage.setItem('fluent-claude-key', v);
+  document.getElementById('claude-key-input').value = '';
+  document.getElementById('claude-key-form').style.display = 'none';
+  document.getElementById('claude-connected').style.display = 'block';
+});
+document.getElementById('claude-key-remove').addEventListener('click', ()=>{
+  localStorage.removeItem('fluent-claude-key');
+  document.getElementById('claude-key-form').style.display = 'block';
+  document.getElementById('claude-connected').style.display = 'none';
+});
+(function initClaudeKeyUI(){
+  const has = !!claudeKey();
+  document.getElementById('claude-key-form').style.display = has ? 'none' : 'block';
+  document.getElementById('claude-connected').style.display = has ? 'block' : 'none';
+})();
 // ─────────────────────────────────────────────────────────────────────────────
 
 // tab switching
@@ -994,6 +1077,8 @@ const startTodayRecording = setupRecorder(null, 'today-wave', 'today-transcript'
     const tip = document.createElement('div'); tip.className='footnote'; tip.style.marginTop='8px';
     tip.textContent='Tap both back and forth — notice where your stress and rhythm differ from Ava.';
     el.appendChild(tip);
+    const p = PHRASES[state.phraseIndex];
+    addCoachBtn(el, p.text, p.ipa, 'phrase');
     addDownloadBtn(el, blob, 'today-practice');
     addSyncBtn(el, 'today', blob);
   }
@@ -1081,6 +1166,10 @@ function startVocabRec(btn, sid, word){
         const tip=document.createElement('div'); tip.className='footnote'; tip.style.marginTop='6px';
         tip.textContent='Tap both to compare. Focus on which syllable Ava stresses — match that rhythm.';
         pbEl.appendChild(tip);
+        const vocabEntry = VOCAB.find(v=>v.word===word);
+        const coachText = vocabEntry ? word+'. Example: '+vocabEntry.ex : word;
+        const coachIpa = vocabEntry ? vocabEntry.ipa : '';
+        addCoachBtn(pbEl, coachText, coachIpa, 'word');
         addDownloadBtn(pbEl, blob, word+'-practice');
         addSyncBtn(pbEl,'vocab-'+sid,blob);
       }
