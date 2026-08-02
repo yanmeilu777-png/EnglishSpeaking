@@ -123,6 +123,7 @@
   .fb-num{font-family:'Fraunces',serif; font-size:20px; color:var(--gold);}
   .fb-label{font-size:11px; color:var(--muted); text-transform:uppercase;}
   @media (max-width:480px){.stat-grid{grid-template-columns:repeat(3,1fr); gap:8px;} .stat-num{font-size:20px;}}
+  .stress-mark{color:var(--gold); font-weight:700; font-style:normal;}
   input[type="password"]{
     background:var(--card-2); color:var(--text); border:1px solid var(--border);
     border-radius:8px; padding:8px 10px; font-family:'Inter'; font-size:13px; width:100%; margin-bottom:8px;
@@ -504,13 +505,21 @@ function setTopic(i){
   renderTopics();
 }
 
+const UNSTRESSED = new Set(['a','an','the','and','or','but','in','on','at','to','for','of','with','it','is','am','are','was','were','be','been','i','you','he','she','we','they','my','your','his','her','our','their','this','that','do','did','does','have','has','had','will','would','could','should','can','may','might','just','so','as','if','not','no','into','by','from','about','without','s','ll','ve','d','m','re','its','there','here','how','what','when','where','who']);
+function stressPhrase(text){
+  return text.replace(/\b[\w']+\b/g, word=>{
+    const base = word.toLowerCase().replace(/'.*$/,'');
+    return UNSTRESSED.has(base) ? word : `<em class="stress-mark">${word}</em>`;
+  });
+}
+
 function renderPhrase(){
   if(typeof state.phraseIndex !== 'number' || state.phraseIndex < 0 || state.phraseIndex >= PHRASES.length) state.phraseIndex = 0;
   const p = PHRASES[state.phraseIndex];
   const tag = document.getElementById('today-tag');
   tag.textContent = p.cat;
   tag.className = 'tag ' + p.cat;
-  document.getElementById('today-phrase').textContent = p.text;
+  document.getElementById('today-phrase').innerHTML = stressPhrase(p.text);
   document.getElementById('today-ipa').textContent = p.ipa;
   document.getElementById('today-tip').textContent = p.tip;
   document.getElementById('today-transcript').innerHTML = '';
