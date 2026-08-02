@@ -538,9 +538,12 @@ function renderVocab(){
       <div class="def">${w.def}</div>
       <div class="ex">"${w.ex}"</div>
       <div class="row" style="margin-top:10px;">
+        <button class="btn primary" onclick="speak('${w.word}. ${w.ex}')">&#9658; Hear it</button>
+        <button class="btn rec" id="vr-${safeId(w.word)}" onclick="startVocabRec(this,'${safeId(w.word)}','${w.word}')">&#9679; Record</button>
+      </div>
+      <div class="row" style="margin-top:8px;">
         <button class="btn" onclick="rateWord('${w.word}', false)">Still learning</button>
         <button class="btn primary" onclick="rateWord('${w.word}', true)">I know this</button>
-        <button class="btn rec" id="vr-${safeId(w.word)}" onclick="startVocabRec(this,'${safeId(w.word)}','${w.word}')">&#9679; Record</button>
       </div>
       <div class="waveform" id="vw-${safeId(w.word)}" style="display:none;"></div>
       <div id="vp-${safeId(w.word)}"></div>
