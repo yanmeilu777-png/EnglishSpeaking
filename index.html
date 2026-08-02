@@ -652,9 +652,20 @@ const PRESENT_PROMPTS = [
 ];
 let presentPromptIndex = 0;
 const PREFERRED_VOICES = [
-  "Google US English", "Samantha", "Microsoft Aria Online (Natural) - English (United States)",
-  "Microsoft Jenny Online (Natural) - English (United States)", "Google UK English Female",
-  "Victoria", "Microsoft Zira Desktop - English (United States)", "Karen", "Moira"
+  // iOS Premium (most natural, requires download in Settings > Accessibility > Spoken Content)
+  "Ava (Premium)", "Samantha (Premium)", "Nicky (Premium)",
+  // iOS Enhanced (good quality, usually pre-installed)
+  "Ava (Enhanced)", "Samantha (Enhanced)", "Nicky (Enhanced)",
+  // Windows Neural (very natural, online)
+  "Microsoft Aria Online (Natural) - English (United States)",
+  "Microsoft Jenny Online (Natural) - English (United States)",
+  "Microsoft Ana Online (Natural) - English (United States)",
+  // iOS standard
+  "Ava", "Nicky", "Samantha",
+  // macOS / other
+  "Karen", "Victoria", "Moira",
+  // Windows / Chrome fallbacks
+  "Google US English", "Microsoft Zira Desktop - English (United States)"
 ];
 function pickVoice(){
   const voices = window.speechSynthesis.getVoices();
@@ -663,7 +674,12 @@ function pickVoice(){
     const v = voices.find(v=>v.name===name);
     if(v) return v;
   }
-  const female = voices.find(v=>/female|Samantha|Victoria|Karen|Moira|Aria|Jenny|Zira/i.test(v.name) && v.lang.startsWith('en'));
+  const enhancedFemale = voices.find(v=>
+    v.lang.startsWith('en') && /enhanced|premium/i.test(v.name));
+  if(enhancedFemale) return enhancedFemale;
+  const female = voices.find(v=>
+    v.lang.startsWith('en') &&
+    /ava|nicky|samantha|karen|victoria|moira|aria|jenny|zira|allison|susan|female/i.test(v.name));
   if(female) return female;
   return voices.find(v=>v.lang.startsWith('en')) || voices[0];
 }
@@ -675,7 +691,7 @@ function speak(text){
   if(!('speechSynthesis' in window)){ alert('Speech synthesis is not supported in this browser.'); return; }
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'en-US'; u.rate = 0.92; u.pitch = 1.05;
+  u.lang = 'en-US'; u.rate = 0.88; u.pitch = 1.0;
   if(!cachedVoice) cachedVoice = pickVoice();
   if(cachedVoice) u.voice = cachedVoice;
   window.speechSynthesis.speak(u);
