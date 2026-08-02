@@ -195,7 +195,7 @@
         <input type="text" id="custom-word-input" class="custom-input" placeholder="Word or phrase">
         <input type="text" id="custom-note-input" class="custom-input" placeholder="中文 / note (optional)">
       </div>
-      <button class="btn primary" onclick="addCustomWord()" style="width:100%; justify-content:center;">+ Add to my list</button>
+      <button class="btn primary" id="custom-word-add-btn" onclick="addCustomWord()" style="width:100%; justify-content:center;">+ Add to my list</button>
       <div id="custom-word-msg" style="font-size:12px; margin-top:8px; display:none;"></div>
     </div>
   </section>
@@ -577,7 +577,7 @@ function renderVocab(){
   state.customVocab = state.customVocab || [];
   const today = todayStr();
   const builtIn = VOCAB.map(w=>({...w, isCustom:false}));
-  const custom = state.customVocab.map(w=>({word:w.word, ipa:'', pos:'custom', def:'', ex:'', cat:'work', zh:w.note||'', isCustom:true}));
+  const custom = state.customVocab.map(w=>({word:w.word, ipa:w.ipa||'', pos:w.pos||'custom', def:w.def||'', ex:w.ex||'', cat:'work', zh:w.note||'', isCustom:true}));
   const allWords = [...builtIn, ...custom];
   const due = allWords.filter(w=>{
     const prog = state.vocabProgress[w.word];
@@ -632,11 +632,12 @@ function rateWord(word, knew){
   document.getElementById('stat-words').textContent = Object.values(state.vocabProgress).filter(v=>v.interval>=14).length;
 }
 
-function addCustomWord(){
+async function addCustomWord(){
   state.customVocab = state.customVocab || [];
   const wordInput = document.getElementById('custom-word-input');
   const noteInput = document.getElementById('custom-note-input');
   const msg = document.getElementById('custom-word-msg');
+  const btn = document.getElementById('custom-word-add-btn');
   const word = wordInput.value.trim();
   const note = noteInput.value.trim();
   const showMsg = (text, color) => { msg.style.display=''; msg.style.color=color; msg.textContent=text; };
@@ -645,9 +646,30 @@ function addCustomWord(){
   if(VOCAB.some(v=>v.word.toLowerCase()===lw) || state.customVocab.some(v=>v.word.toLowerCase()===lw)){
     showMsg(`"${word}" is already in your list.`, 'var(--coral)'); return;
   }
-  state.customVocab.push({word, note, dateAdded:todayStr()});
-  wordInput.value = ''; noteInput.value = '';
-  showMsg(`"${word}" added to your list!`, 'var(--sage)');
+  btn.disabled = true;
+  showMsg('Looking up definition…', 'var(--muted)');
+  let def='', ipa='', pos='custom', ex='';
+  try{
+    const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
+    if(res.ok){
+      const data = await res.json();
+      const entry = data[0];
+      const ph = (entry.phonetics||[]).find(p=>p.text);
+      if(ph) ipa = ph.text;
+      if(entry.meanings&&entry.meanings.length){
+        const m = entry.meanings[0];
+        pos = m.partOfSpeech||'custom';
+        if(m.definitions&&m.definitions.length){
+          def = m.definitions[0].definition||'';
+          ex  = m.definitions[0].example||'';
+        }
+      }
+    }
+  }catch(e){}
+  btn.disabled = false;
+  state.customVocab.push({word, note, def, ipa, pos, ex, dateAdded:todayStr()});
+  wordInput.value=''; noteInput.value='';
+  showMsg(`"${word}" added!`, 'var(--sage)');
   setTimeout(()=>{ msg.style.display='none'; }, 2500);
   saveState();
   renderVocab();
