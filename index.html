@@ -708,7 +708,7 @@ async function ghFileSha(path){
       {headers:{Authorization:`token ${ghPat()}`}});
     if(r.status===404) return null;
     return r.ok ? (await r.json()).sha : null;
-  }catch(){ return null; }
+  }catch(e){ return null; }
 }
 async function blobToB64(blob){
   return new Promise((res,rej)=>{
@@ -750,7 +750,7 @@ async function loadSyncMeta(){
   try{
     const r = await fetch(`https://raw.githubusercontent.com/${GH.owner}/${GH.repo}/${GH.branch}/recordings/meta.json?t=${Date.now()}`);
     return r.ok ? await r.json() : null;
-  }catch(){ return null; }
+  }catch(e){ return null; }
 }
 function ghRawUrl(path){ return `https://raw.githubusercontent.com/${GH.owner}/${GH.repo}/${GH.branch}/${path}`; }
 
