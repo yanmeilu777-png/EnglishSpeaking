@@ -220,6 +220,16 @@
       <h3>All topics</h3>
       <div id="topic-browse" class="footnote"></div>
     </div>
+    <div class="card" id="my-topics-panel">
+      <h3 style="font-family:'Fraunces',serif; font-size:18px; margin:0 0 6px;">My Topics</h3>
+      <p class="muted" style="font-size:13px; margin:0 0 14px;">Type any subject — AI writes fresh discussion questions just for you.</p>
+      <div class="row" style="margin-bottom:10px; align-items:center;">
+        <input type="text" id="custom-topic-input" class="custom-input" placeholder="e.g. remote work, dating apps, AI tools…">
+        <button class="btn primary" id="custom-topic-gen-btn" onclick="generateTopic()" style="white-space:nowrap;">✦ Generate</button>
+      </div>
+      <div id="custom-topic-msg" style="font-size:12px; margin-bottom:4px; display:none;"></div>
+      <div id="custom-topic-list"></div>
+    </div>
   </section>
 
   <section id="pron">
@@ -413,6 +423,7 @@ async function loadState(){
   if(!state.vocabProgress) state.vocabProgress = {};
   if(!state.activity) state.activity = [];
   if(!state.customVocab) state.customVocab = [];
+  if(!state.customTopics) state.customTopics = [];
   checkStreak();
   render();
 }
@@ -522,6 +533,7 @@ function renderTopics(){
   document.getElementById('topic-browse').innerHTML = TOPICS.map((topic,i)=>
     `<div class="topic-link" onclick="setTopic(${i})">${topic.title}</div>`
   ).join('');
+  renderCustomTopics();
 }
 function resetTopicRecording(){
   const rec = document.getElementById('topic-record');
@@ -680,6 +692,90 @@ function deleteCustomWord(word){
   delete state.vocabProgress[word];
   saveState();
   renderVocab();
+}
+
+function renderCustomTopics(){
+  const list = document.getElementById('custom-topic-list');
+  if(!list) return;
+  const topics = state.customTopics || [];
+  if(!topics.length){ list.innerHTML=''; return; }
+  list.innerHTML = topics.map((t,i)=>`
+    <div style="padding:16px 0; border-top:1px solid var(--border); margin-top:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px;">
+        <strong style="font-family:'Fraunces',serif; font-size:16px;">${escHtml(t.title)}</strong>
+        <button class="btn" style="font-size:11px; padding:4px 10px; color:var(--coral);" onclick="deleteCustomTopic(${i})">✕ Remove</button>
+      </div>
+      <p class="muted" style="font-size:13px; margin:0 0 10px;">${escHtml(t.blurb)}</p>
+      <ul class="q-list">${t.questions.map(q=>`<li>${stressPhrase(q)}${intonationArrow(q)}</li>`).join('')}</ul>
+      ${t.vocab&&t.vocab.length ? `<div class="chip-row" style="margin-top:8px;">${t.vocab.map(([w,d])=>`<span class="chip"><b>${escHtml(w)}</b> — ${escHtml(d)}</span>`).join('')}</div>` : ''}
+      <div class="row" style="margin-top:12px;">
+        <button class="btn primary" onclick="speak(${JSON.stringify(t.questions.join('. '))})">&#9658; Hear questions</button>
+        <button class="btn" id="refresh-topic-btn-${i}" onclick="refreshTopicQuestions(${i})">↺ New questions</button>
+      </div>
+    </div>`).join('');
+}
+
+async function generateTopic(){
+  const input = document.getElementById('custom-topic-input');
+  const msg   = document.getElementById('custom-topic-msg');
+  const btn   = document.getElementById('custom-topic-gen-btn');
+  const showMsg = (text, color) => { msg.style.display=''; msg.style.color=color; msg.textContent=text; };
+  const title = input.value.trim();
+  if(!title){ showMsg('Please enter a topic.','var(--coral)'); return; }
+  if(!claudeKey()){ showMsg('Add your Claude API key in Settings first.','var(--coral)'); return; }
+  btn.disabled=true;
+  showMsg('Generating…','var(--muted)');
+  const prompt = `You are helping an English learner (native Mandarin speaker, intermediate-advanced) practice conversational English.\nTopic: "${title}"\nReply ONLY with this JSON, no other text:\n{"blurb":"one engaging sentence about the topic, max 15 words","questions":["personal open-ended question 1","personal open-ended question 2","personal open-ended question 3"],"vocab":[["word1","short plain-English definition"],["word2","short plain-English definition"],["word3","short plain-English definition"]]}\nKeep language natural and conversational, suitable for workplace or social small talk.`;
+  try{
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'x-api-key':claudeKey(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-use':'true','content-type':'application/json'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:400,messages:[{role:'user',content:prompt}]})
+    });
+    const data = await res.json();
+    const parsed = JSON.parse(data.content[0].text.trim());
+    state.customTopics = state.customTopics||[];
+    state.customTopics.unshift({title, blurb:parsed.blurb, questions:parsed.questions, vocab:parsed.vocab||[], dateAdded:todayStr()});
+    input.value='';
+    showMsg(`"${title}" added!`,'var(--sage)');
+    setTimeout(()=>{ msg.style.display='none'; },2500);
+    saveState();
+    renderCustomTopics();
+  }catch(e){
+    showMsg('Could not generate. Try again.','var(--coral)');
+  }
+  btn.disabled=false;
+}
+
+async function refreshTopicQuestions(i){
+  if(!claudeKey()) return;
+  state.customTopics = state.customTopics||[];
+  const t = state.customTopics[i];
+  if(!t) return;
+  const btn = document.getElementById(`refresh-topic-btn-${i}`);
+  if(btn){ btn.disabled=true; btn.textContent='↺ Refreshing…'; }
+  const prompt = `You are helping an English learner practice conversational English.\nTopic: "${t.title}"\nCreate DIFFERENT discussion questions from before. Reply ONLY with this JSON, no other text:\n{"blurb":"one engaging sentence about the topic, max 15 words","questions":["personal open-ended question 1","personal open-ended question 2","personal open-ended question 3"],"vocab":[["word1","short plain-English definition"],["word2","short plain-English definition"],["word3","short plain-English definition"]]}`;
+  try{
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'x-api-key':claudeKey(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-use':'true','content-type':'application/json'},
+      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:400,messages:[{role:'user',content:prompt}]})
+    });
+    const data = await res.json();
+    const parsed = JSON.parse(data.content[0].text.trim());
+    state.customTopics[i] = {...t, blurb:parsed.blurb, questions:parsed.questions, vocab:parsed.vocab||[]};
+    saveState();
+    renderCustomTopics();
+  }catch(e){
+    if(btn){ btn.disabled=false; btn.textContent='↺ New questions'; }
+  }
+}
+
+function deleteCustomTopic(i){
+  state.customTopics = (state.customTopics||[]);
+  state.customTopics.splice(i,1);
+  saveState();
+  renderCustomTopics();
 }
 
 function renderPronPairs(){
