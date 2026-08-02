@@ -975,11 +975,16 @@ const startTodayRecording = setupRecorder(null, 'today-wave', 'today-transcript'
   el.innerHTML = `<div class="transcript">${diffText(target, heard)}</div>`;
   if(blob){
     const url = URL.createObjectURL(blob);
-    const pb = document.createElement('button');
-    pb.className = 'btn'; pb.style.marginTop = '8px';
-    pb.innerHTML = '&#9658; Play back';
-    pb.onclick = ()=> new Audio(url).play();
-    el.appendChild(pb);
+    const row = document.createElement('div'); row.className='row'; row.style.marginTop='10px';
+    const ava = document.createElement('button'); ava.className='btn primary';
+    ava.innerHTML='&#9658; Hear Ava'; ava.onclick=()=>speak(target);
+    const me = document.createElement('button'); me.className='btn';
+    me.innerHTML='&#9658; Hear me'; me.onclick=()=>new Audio(url).play();
+    row.appendChild(ava); row.appendChild(me);
+    el.appendChild(row);
+    const tip = document.createElement('div'); tip.className='footnote'; tip.style.marginTop='8px';
+    tip.textContent='Tap both back and forth — notice where your stress and rhythm differ from Ava.';
+    el.appendChild(tip);
     addDownloadBtn(el, blob, 'today-practice');
     addSyncBtn(el, 'today', blob);
   }
@@ -1057,9 +1062,16 @@ function startVocabRec(btn, sid, word){
       const pbEl=document.getElementById('vp-'+sid);
       if(pbEl){ pbEl.innerHTML='';
         const url=URL.createObjectURL(blob);
-        const pb=document.createElement('button'); pb.className='btn'; pb.style.marginTop='8px';
-        pb.innerHTML='&#9658; Play back'; pb.onclick=()=>new Audio(url).play();
-        pbEl.appendChild(pb);
+        const row=document.createElement('div'); row.className='row'; row.style.marginTop='8px';
+        const ava=document.createElement('button'); ava.className='btn primary';
+        ava.innerHTML='&#9658; Hear Ava'; ava.onclick=()=>speak(word);
+        const me=document.createElement('button'); me.className='btn';
+        me.innerHTML='&#9658; Hear me'; me.onclick=()=>new Audio(url).play();
+        row.appendChild(ava); row.appendChild(me);
+        pbEl.appendChild(row);
+        const tip=document.createElement('div'); tip.className='footnote'; tip.style.marginTop='6px';
+        tip.textContent='Tap both to compare. Focus on which syllable Ava stresses — match that rhythm.';
+        pbEl.appendChild(tip);
         addDownloadBtn(pbEl, blob, word+'-practice');
         addSyncBtn(pbEl,'vocab-'+sid,blob);
       }
