@@ -725,11 +725,13 @@ async function generateTopic(){
   if(!claudeKey()){ showMsg('Add your Claude API key in Settings first.','var(--coral)'); return; }
   btn.disabled=true;
   showMsg('Generating…','var(--muted)');
+  const key = claudeKey();
   const prompt = `You are helping an English learner (native Mandarin speaker, intermediate-advanced) practice conversational English.\nTopic: "${title}"\nReply ONLY with this JSON, no other text:\n{"blurb":"one engaging sentence about the topic, max 15 words","questions":["personal open-ended question 1","personal open-ended question 2","personal open-ended question 3"],"vocab":[["word1","short plain-English definition"],["word2","short plain-English definition"],["word3","short plain-English definition"]]}\nKeep language natural and conversational, suitable for workplace or social small talk.`;
   try{
     const res = await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
-      headers:{'x-api-key':claudeKey(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-use':'true','content-type':'application/json'},
+      mode:'cors',
+      headers:{'x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-use':'true','content-type':'application/json'},
       body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:400,messages:[{role:'user',content:prompt}]})
     });
     const data = await res.json();
@@ -746,7 +748,7 @@ async function generateTopic(){
     saveState();
     renderCustomTopics();
   }catch(e){
-    showMsg('Error: '+(e.message||'Could not generate. Try again.'),'var(--coral)');
+    showMsg(`Error: ${e.name} — ${e.message}`,'var(--coral)');
   }
   btn.disabled=false;
 }
@@ -1016,7 +1018,7 @@ function addDownloadBtn(container, blob, filename){
   container.appendChild(btn);
 }
 
-function claudeKey(){ return localStorage.getItem('fluent-claude-key')||''; }
+function claudeKey(){ return (localStorage.getItem('fluent-claude-key')||'').trim(); }
 async function getCoaching(targetText, ipa, contextType){
   const key = claudeKey();
   if(!key) return null;
