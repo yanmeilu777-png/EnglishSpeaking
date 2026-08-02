@@ -154,6 +154,11 @@
       <span class="tag" id="today-tag">family</span>
       <div class="phrase" id="today-phrase"></div>
       <div class="ipa" id="today-ipa"></div>
+      <div class="footnote" style="margin:4px 0 6px; font-size:11px; letter-spacing:.02em;">
+        <span style="color:var(--gold);">■</span> stressed word &nbsp;
+        <span style="color:var(--sage);">↗</span> voice rises &nbsp;
+        <span style="color:var(--coral);">↘</span> voice falls
+      </div>
       <div class="tip" id="today-tip"></div>
       <div class="row" style="margin-top:16px;">
         <button class="btn primary" id="today-listen">&#9658; Hear it</button>
@@ -474,7 +479,7 @@ function renderPresent(){
   const s = STRUCTURES[idx];
   document.getElementById('struct-body').innerHTML = `
     <ul class="step-list">${s.steps.map(step=>`<li>${step}</li>`).join('')}</ul>
-    <div class="tip" style="margin-top:14px;">Example: ${s.example} <span onclick="speak(\`${s.example.replace(/`/g,"'")}\`)" style="cursor:pointer; color:var(--gold);">&#9658;</span></div>
+    <div class="tip" style="margin-top:14px;">Example: ${stressPhrase(s.example)}${intonationArrow(s.example)} <span onclick="speak(\`${s.example.replace(/`/g,"'")}\`)" style="cursor:pointer; color:var(--gold);">&#9658;</span></div>
   `;
   document.getElementById('present-prompt').textContent = PRESENT_PROMPTS[presentPromptIndex];
   document.getElementById('marketing-glossary').innerHTML = MARKETING_TERMS.map(w=>`
@@ -482,7 +487,7 @@ function renderPresent(){
       <div class="word-head"><span class="word">${w.word}</span><span class="pos">${w.pos}</span></div>
       <div class="ipa">${w.ipa} <span onclick="speak('${w.word}')" style="cursor:pointer; color:var(--gold);">&#9658;</span></div>
       <div class="def">${w.def}</div>
-      <div class="ex">"${w.ex}"</div>
+      <div class="ex">"${stressPhrase(w.ex)}${intonationArrow(w.ex)}"</div>
     </div>`).join('');
 }
 document.getElementById('struct-select').addEventListener('change', renderPresent);
@@ -498,7 +503,7 @@ function renderTopics(){
   const t = TOPICS[state.topicIndex];
   document.getElementById('topic-title').textContent = t.title;
   document.getElementById('topic-blurb').textContent = t.blurb;
-  document.getElementById('topic-questions').innerHTML = '<ul class="q-list">' + t.questions.map(q=>`<li>${q}</li>`).join('') + '</ul>';
+  document.getElementById('topic-questions').innerHTML = '<ul class="q-list">' + t.questions.map(q=>`<li>${stressPhrase(q)}${intonationArrow(q)}</li>`).join('') + '</ul>';
   document.getElementById('topic-vocab').innerHTML = '<div class="chip-row">' + t.vocab.map(([w,d])=>`<span class="chip"><b>${w}</b> — ${d}</span>`).join('') + '</div>';
   document.getElementById('topic-browse').innerHTML = TOPICS.map((topic,i)=>
     `<div class="topic-link" onclick="setTopic(${i})">${topic.title}</div>`
@@ -524,6 +529,19 @@ function stressPhrase(text){
     return UNSTRESSED.has(base) ? word : `<em class="stress-mark">${word}</em>`;
   });
 }
+function intonationArrow(text){
+  const t = text.trim().replace(/[.!?…]+$/, m => m);
+  if(t.endsWith('?')){
+    const isWh = /^(what|where|when|why|how|who|whose|which|whom)\b/i.test(t);
+    return isWh
+      ? ' <span style="color:var(--coral);font-size:15px;">↘</span>'
+      : ' <span style="color:var(--sage);font-size:15px;">↗</span>';
+  }
+  if(t.endsWith('...') || t.endsWith('…')){
+    return ' <span style="color:var(--muted);font-size:15px;">→</span>';
+  }
+  return ' <span style="color:var(--coral);font-size:15px;">↘</span>';
+}
 
 function renderPhrase(){
   if(typeof state.phraseIndex !== 'number' || state.phraseIndex < 0 || state.phraseIndex >= PHRASES.length) state.phraseIndex = 0;
@@ -531,7 +549,7 @@ function renderPhrase(){
   const tag = document.getElementById('today-tag');
   tag.textContent = p.cat;
   tag.className = 'tag ' + p.cat;
-  document.getElementById('today-phrase').innerHTML = stressPhrase(p.text);
+  document.getElementById('today-phrase').innerHTML = stressPhrase(p.text) + intonationArrow(p.text);
   document.getElementById('today-ipa').textContent = p.ipa;
   document.getElementById('today-tip').textContent = p.tip;
   document.getElementById('today-transcript').innerHTML = '';
@@ -557,7 +575,7 @@ function renderVocab(){
       <div class="word-head"><span class="word">${w.word}</span><span class="pos">${w.pos}</span></div>
       <div class="ipa">${w.ipa} <span onclick="speak('${w.word}')" style="cursor:pointer; color:var(--gold);">&#9658;</span></div>
       <div class="def">${w.def}</div>
-      <div class="ex">"${w.ex}"</div>
+      <div class="ex">"${stressPhrase(w.ex)}${intonationArrow(w.ex)}"</div>
       <div class="row" style="margin-top:10px;">
         <button class="btn primary" onclick="speak('${w.word}. ${w.ex}')">&#9658; Hear it</button>
         <button class="btn rec" id="vr-${safeId(w.word)}" onclick="startVocabRec(this,'${safeId(w.word)}','${w.word}')">&#9679; Record</button>
