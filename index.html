@@ -81,6 +81,9 @@
   .pos{font-size:12px; color:var(--muted); font-style:italic;}
   .def{font-size:14px; margin:6px 0;}
   .ex{font-size:13px; color:var(--muted); font-style:italic;}
+  .def-zh{font-size:13px; color:var(--gold); margin:2px 0 8px;}
+  .custom-input{background:var(--card); border:1px solid var(--border); border-radius:8px; color:var(--text); padding:10px 12px; font-size:14px; font-family:'Inter',sans-serif; flex:1; min-width:100px;}
+  .custom-input::placeholder{color:var(--muted);}
   .due{font-size:11px; color:var(--sage); margin-top:4px;}
   .waveform{display:flex; align-items:center; gap:3px; height:36px; margin:14px 0;}
   .bar{width:4px; background:var(--gold); border-radius:2px; height:6px; transition:height .1s;}
@@ -185,6 +188,16 @@
       <p class="muted" style="font-size:14px; margin:8px 0 0;">Spaced repetition — words you rate "still learning" come back sooner.</p>
     </div>
     <div class="card" id="vocab-list"></div>
+    <div class="card" id="my-words-panel">
+      <h3 style="font-family:'Fraunces',serif; font-size:18px; margin:0 0 6px;">My Words</h3>
+      <p class="muted" style="font-size:13px; margin:0 0 14px;">Add any word you want to drill — it joins the same daily review rotation.</p>
+      <div class="row" style="margin-bottom:10px;">
+        <input type="text" id="custom-word-input" class="custom-input" placeholder="Word or phrase">
+        <input type="text" id="custom-note-input" class="custom-input" placeholder="中文 / note (optional)">
+      </div>
+      <button class="btn primary" onclick="addCustomWord()" style="width:100%; justify-content:center;">+ Add to my list</button>
+      <div id="custom-word-msg" style="font-size:12px; margin-top:8px; display:none;"></div>
+    </div>
   </section>
 
   <section id="topics">
@@ -323,27 +336,27 @@ const PHRASES = [
 ];
 
 const VOCAB = [
-  {word:"nuance", ipa:"/ˈnuːˌɑːns/", pos:"noun", def:"a subtle difference in meaning, tone, or feeling.", ex:"There's a nuance in how she said 'fine' — she didn't mean it.", cat:"family"},
-  {word:"candid", ipa:"/ˈkændɪd/", pos:"adjective", def:"honest and direct, even when it's uncomfortable.", ex:"Can I be candid with you about how I've been feeling?", cat:"family"},
-  {word:"rapport", ipa:"/ræˈpɔːr/", pos:"noun", def:"a friendly, trusting connection with someone.", ex:"We built good rapport in the first five minutes of the call.", cat:"work"},
-  {word:"touch base", ipa:"/tʌtʃ beɪs/", pos:"phrase", def:"to make brief contact to check in.", ex:"Let's touch base tomorrow before the deadline.", cat:"work"},
-  {word:"bandwidth", ipa:"/ˈbændˌwɪdθ/", pos:"noun, informal", def:"the time or mental capacity to take something on.", ex:"I don't have the bandwidth for another project this week.", cat:"work"},
-  {word:"take with a grain of salt", ipa:"/teɪk wɪð ə ɡreɪn əv sɔːlt/", pos:"phrase", def:"to not fully trust something; treat it with mild skepticism.", ex:"Take his advice with a grain of salt — he's never actually done it.", cat:"work"},
-  {word:"compelling", ipa:"/kəmˈpɛlɪŋ/", pos:"adjective", def:"convincing and interesting enough to hold attention.", ex:"That's a compelling argument — I hadn't considered that angle.", cat:"presentation"},
-  {word:"streamline", ipa:"/ˈstriːmˌlaɪn/", pos:"verb", def:"to make a process simpler or more efficient.", ex:"We streamlined the approval process from five steps to two.", cat:"presentation"},
-  {word:"overarching", ipa:"/ˌoʊvərˈɑːrtʃɪŋ/", pos:"adjective", def:"the main idea that covers everything else.", ex:"Our overarching goal this quarter is customer retention.", cat:"presentation"},
-  {word:"resonate", ipa:"/ˈrɛzəˌneɪt/", pos:"verb", def:"to connect emotionally or meaningfully with someone.", ex:"That story really resonated with the audience.", cat:"presentation"},
-  {word:"articulate", ipa:"/ɑːrˈtɪkjəˌleɪt/", pos:"verb", def:"to express an idea clearly and precisely.", ex:"She articulated the problem better than I ever could.", cat:"presentation"},
-  {word:"reconcile", ipa:"/ˈrɛkənˌsaɪl/", pos:"verb", def:"to make two conflicting things fit together, or make peace after conflict.", ex:"It took years for them to reconcile after the argument.", cat:"family"},
-  {word:"vulnerable", ipa:"/ˈvʌlnərəbəl/", pos:"adjective", def:"open to being emotionally hurt; willing to show that.", ex:"It's hard to be vulnerable with family sometimes.", cat:"family"},
-  {word:"pivot", ipa:"/ˈpɪvət/", pos:"verb", def:"to change direction or approach, often quickly.", ex:"We had to pivot our strategy after the client feedback.", cat:"work"},
-  {word:"leverage", ipa:"/ˈlɛvərɪdʒ/", pos:"verb", def:"to use something effectively to your advantage.", ex:"We can leverage the existing data instead of starting from scratch.", cat:"work"},
-  {word:"baseline", ipa:"/ˈbeɪsˌlaɪn/", pos:"noun", def:"the level of sales or a metric expected with no marketing at all — the floor you're measuring lift against.", ex:"Our MMM estimated baseline accounts for 60 percent of sales, so 40 percent is attributable to marketing.", cat:"presentation"},
-  {word:"saturation", ipa:"/ˌsætʃəˈreɪʃən/", pos:"noun", def:"the point where adding more spend on a channel produces almost no additional return.", ex:"Paid search was hitting saturation above 50K a week, so we reallocated to display.", cat:"presentation"},
-  {word:"holdout", ipa:"/ˈhoʊldˌaʊt/", pos:"noun", def:"a group intentionally excluded from a campaign to serve as a control — what would have happened anyway.", ex:"The holdout group bought at the same rate, which meant the campaign had near-zero incrementality.", cat:"presentation"},
-  {word:"cohort", ipa:"/ˈkoʊhɔːrt/", pos:"noun", def:"a group of customers who share a common starting point — like everyone who signed up in January.", ex:"The January cohort had a much higher 90-day retention rate than any cohort from Q3.", cat:"presentation"},
-  {word:"proxy metric", ipa:"/ˈprɒksi ˈmɛtrɪk/", pos:"phrase", def:"a secondary measure used when the real outcome is hard to observe directly.", ex:"We used branded search volume as a proxy metric for TV awareness.", cat:"presentation"},
-  {word:"churn", ipa:"/tʃɜːrn/", pos:"noun", def:"the rate at which customers stop buying or subscribing — the opposite of retention.", ex:"A 5 percent monthly churn rate means the average customer stays less than 20 months.", cat:"presentation"}
+  {word:"nuance", ipa:"/ˈnuːˌɑːns/", pos:"noun", def:"a subtle difference in meaning, tone, or feeling.", ex:"There's a nuance in how she said 'fine' — she didn't mean it.", cat:"family", zh:"细微之处；微妙差别"},
+  {word:"candid", ipa:"/ˈkændɪd/", pos:"adjective", def:"honest and direct, even when it's uncomfortable.", ex:"Can I be candid with you about how I've been feeling?", cat:"family", zh:"坦诚的；直率的"},
+  {word:"rapport", ipa:"/ræˈpɔːr/", pos:"noun", def:"a friendly, trusting connection with someone.", ex:"We built good rapport in the first five minutes of the call.", cat:"work", zh:"融洽关系；默契"},
+  {word:"touch base", ipa:"/tʌtʃ beɪs/", pos:"phrase", def:"to make brief contact to check in.", ex:"Let's touch base tomorrow before the deadline.", cat:"work", zh:"简短联络；保持联系"},
+  {word:"bandwidth", ipa:"/ˈbændˌwɪdθ/", pos:"noun, informal", def:"the time or mental capacity to take something on.", ex:"I don't have the bandwidth for another project this week.", cat:"work", zh:"（精力/时间的）余量"},
+  {word:"take with a grain of salt", ipa:"/teɪk wɪð ə ɡreɪn əv sɔːlt/", pos:"phrase", def:"to not fully trust something; treat it with mild skepticism.", ex:"Take his advice with a grain of salt — he's never actually done it.", cat:"work", zh:"半信半疑；存疑"},
+  {word:"compelling", ipa:"/kəmˈpɛlɪŋ/", pos:"adjective", def:"convincing and interesting enough to hold attention.", ex:"That's a compelling argument — I hadn't considered that angle.", cat:"presentation", zh:"有说服力的；引人入胜的"},
+  {word:"streamline", ipa:"/ˈstriːmˌlaɪn/", pos:"verb", def:"to make a process simpler or more efficient.", ex:"We streamlined the approval process from five steps to two.", cat:"presentation", zh:"精简流程；简化"},
+  {word:"overarching", ipa:"/ˌoʊvərˈɑːrtʃɪŋ/", pos:"adjective", def:"the main idea that covers everything else.", ex:"Our overarching goal this quarter is customer retention.", cat:"presentation", zh:"总体性的；统领全局的"},
+  {word:"resonate", ipa:"/ˈrɛzəˌneɪt/", pos:"verb", def:"to connect emotionally or meaningfully with someone.", ex:"That story really resonated with the audience.", cat:"presentation", zh:"引起共鸣"},
+  {word:"articulate", ipa:"/ɑːrˈtɪkjəˌleɪt/", pos:"verb", def:"to express an idea clearly and precisely.", ex:"She articulated the problem better than I ever could.", cat:"presentation", zh:"清晰表达"},
+  {word:"reconcile", ipa:"/ˈrɛkənˌsaɪl/", pos:"verb", def:"to make two conflicting things fit together, or make peace after conflict.", ex:"It took years for them to reconcile after the argument.", cat:"family", zh:"和解；协调（矛盾）"},
+  {word:"vulnerable", ipa:"/ˈvʌlnərəbəl/", pos:"adjective", def:"open to being emotionally hurt; willing to show that.", ex:"It's hard to be vulnerable with family sometimes.", cat:"family", zh:"脆弱的；袒露内心的"},
+  {word:"pivot", ipa:"/ˈpɪvət/", pos:"verb", def:"to change direction or approach, often quickly.", ex:"We had to pivot our strategy after the client feedback.", cat:"work", zh:"转变方向；调整策略"},
+  {word:"leverage", ipa:"/ˈlɛvərɪdʒ/", pos:"verb", def:"to use something effectively to your advantage.", ex:"We can leverage the existing data instead of starting from scratch.", cat:"work", zh:"利用；善用资源"},
+  {word:"baseline", ipa:"/ˈbeɪsˌlaɪn/", pos:"noun", def:"the level of sales or a metric expected with no marketing at all — the floor you're measuring lift against.", ex:"Our MMM estimated baseline accounts for 60 percent of sales, so 40 percent is attributable to marketing.", cat:"presentation", zh:"基准值；无营销情况下的自然销量"},
+  {word:"saturation", ipa:"/ˌsætʃəˈreɪʃən/", pos:"noun", def:"the point where adding more spend on a channel produces almost no additional return.", ex:"Paid search was hitting saturation above 50K a week, so we reallocated to display.", cat:"presentation", zh:"饱和（边际回报递减）"},
+  {word:"holdout", ipa:"/ˈhoʊldˌaʊt/", pos:"noun", def:"a group intentionally excluded from a campaign to serve as a control — what would have happened anyway.", ex:"The holdout group bought at the same rate, which meant the campaign had near-zero incrementality.", cat:"presentation", zh:"对照组；测试排除组"},
+  {word:"cohort", ipa:"/ˈkoʊhɔːrt/", pos:"noun", def:"a group of customers who share a common starting point — like everyone who signed up in January.", ex:"The January cohort had a much higher 90-day retention rate than any cohort from Q3.", cat:"presentation", zh:"同期用户群组"},
+  {word:"proxy metric", ipa:"/ˈprɒksi ˈmɛtrɪk/", pos:"phrase", def:"a secondary measure used when the real outcome is hard to observe directly.", ex:"We used branded search volume as a proxy metric for TV awareness.", cat:"presentation", zh:"代理指标；替代指标"},
+  {word:"churn", ipa:"/tʃɜːrn/", pos:"noun", def:"the rate at which customers stop buying or subscribing — the opposite of retention.", ex:"A 5 percent monthly churn rate means the average customer stays less than 20 months.", cat:"presentation", zh:"用户流失率"}
 ];
 
 const TOPICS = [
@@ -399,6 +412,7 @@ async function loadState(){
   if(typeof state.topicIndex !== 'number' || state.topicIndex < 0 || state.topicIndex >= TOPICS.length) state.topicIndex = 0;
   if(!state.vocabProgress) state.vocabProgress = {};
   if(!state.activity) state.activity = [];
+  if(!state.customVocab) state.customVocab = [];
   checkStreak();
   render();
 }
@@ -556,36 +570,48 @@ function renderPhrase(){
 }
 
 function safeId(w){ return w.replace(/\s+/g,'-').replace(/[^a-zA-Z0-9-]/g,''); }
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escQ(s){ return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
 function renderVocab(){
+  state.customVocab = state.customVocab || [];
   const today = todayStr();
-  const due = VOCAB.filter(w=>{
+  const builtIn = VOCAB.map(w=>({...w, isCustom:false}));
+  const custom = state.customVocab.map(w=>({word:w.word, ipa:'', pos:'custom', def:'', ex:'', cat:'work', zh:w.note||'', isCustom:true}));
+  const allWords = [...builtIn, ...custom];
+  const due = allWords.filter(w=>{
     const prog = state.vocabProgress[w.word];
     if(!prog) return true;
     return prog.due <= today;
   });
   const list = document.getElementById('vocab-list');
   if(due.length===0){
-    list.innerHTML = '<div class="empty">All caught up. Come back tomorrow for more words.</div>';
+    list.innerHTML = '<div class="empty">All caught up! Come back tomorrow for more words.</div>';
     return;
   }
   list.innerHTML = due.map(w=>{
     const prog = state.vocabProgress[w.word];
     const dueLabel = prog ? `next review in ${prog.interval} day${prog.interval>1?'s':''}` : 'new word';
+    const sid = safeId(w.word);
+    const qw = escQ(w.word);
+    const hearTarget = w.ex ? `${qw}. ${escQ(w.ex)}` : qw;
     return `<div class="word-card">
-      <div class="word-head"><span class="word">${w.word}</span><span class="pos">${w.pos}</span></div>
-      <div class="ipa">${w.ipa} <span onclick="speak('${w.word}')" style="cursor:pointer; color:var(--gold);">&#9658;</span></div>
-      <div class="def">${w.def}</div>
-      <div class="ex">"${stressPhrase(w.ex)}${intonationArrow(w.ex)}"</div>
+      <div class="word-head"><span class="word">${escHtml(w.word)}</span><span class="pos">${w.pos}</span></div>
+      ${w.ipa ? `<div class="ipa">${w.ipa} <span onclick="speak('${qw}')" style="cursor:pointer; color:var(--gold);">&#9658;</span></div>` : ''}
+      ${w.def ? `<div class="def">${escHtml(w.def)}</div>` : ''}
+      ${w.zh ? `<div class="def-zh">&#127464;&#127475; ${escHtml(w.zh)}</div>` : ''}
+      ${w.ex ? `<div class="ex">"${stressPhrase(w.ex)}${intonationArrow(w.ex)}"</div>` : ''}
       <div class="row" style="margin-top:10px;">
-        <button class="btn primary" onclick="speak('${w.word}. ${w.ex}')">&#9658; Hear it</button>
-        <button class="btn rec" id="vr-${safeId(w.word)}" onclick="startVocabRec(this,'${safeId(w.word)}','${w.word}')">&#9679; Record</button>
+        <button class="btn primary" onclick="speak('${hearTarget}')">&#9658; Hear it</button>
+        <button class="btn rec" id="vr-${sid}" onclick="startVocabRec(this,'${sid}','${qw}')">&#9679; Record</button>
+        ${w.isCustom ? `<button class="btn" style="color:var(--coral); border-color:var(--coral);" onclick="deleteCustomWord('${qw}')">&#10005; Delete</button>` : ''}
       </div>
       <div class="row" style="margin-top:8px;">
-        <button class="btn" onclick="rateWord('${w.word}', false)">Still learning</button>
-        <button class="btn primary" onclick="rateWord('${w.word}', true)">I know this</button>
+        <button class="btn" onclick="rateWord('${qw}', false)">Still learning</button>
+        <button class="btn primary" onclick="rateWord('${qw}', true)">I know this</button>
       </div>
-      <div class="waveform" id="vw-${safeId(w.word)}" style="display:none;"></div>
-      <div id="vp-${safeId(w.word)}"></div>
+      <div class="waveform" id="vw-${sid}" style="display:none;"></div>
+      <div id="vp-${sid}"></div>
       <div class="due">${dueLabel}</div>
     </div>`;
   }).join('');
@@ -604,6 +630,34 @@ function rateWord(word, knew){
   saveState();
   renderVocab();
   document.getElementById('stat-words').textContent = Object.values(state.vocabProgress).filter(v=>v.interval>=14).length;
+}
+
+function addCustomWord(){
+  state.customVocab = state.customVocab || [];
+  const wordInput = document.getElementById('custom-word-input');
+  const noteInput = document.getElementById('custom-note-input');
+  const msg = document.getElementById('custom-word-msg');
+  const word = wordInput.value.trim();
+  const note = noteInput.value.trim();
+  const showMsg = (text, color) => { msg.style.display=''; msg.style.color=color; msg.textContent=text; };
+  if(!word){ showMsg('Please enter a word or phrase.', 'var(--coral)'); return; }
+  const lw = word.toLowerCase();
+  if(VOCAB.some(v=>v.word.toLowerCase()===lw) || state.customVocab.some(v=>v.word.toLowerCase()===lw)){
+    showMsg(`"${word}" is already in your list.`, 'var(--coral)'); return;
+  }
+  state.customVocab.push({word, note, dateAdded:todayStr()});
+  wordInput.value = ''; noteInput.value = '';
+  showMsg(`"${word}" added to your list!`, 'var(--sage)');
+  setTimeout(()=>{ msg.style.display='none'; }, 2500);
+  saveState();
+  renderVocab();
+}
+
+function deleteCustomWord(word){
+  state.customVocab = (state.customVocab||[]).filter(v=>v.word!==word);
+  delete state.vocabProgress[word];
+  saveState();
+  renderVocab();
 }
 
 function renderPronPairs(){
