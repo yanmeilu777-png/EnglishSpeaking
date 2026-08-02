@@ -191,10 +191,11 @@
     <div class="card" id="my-words-panel">
       <h3 style="font-family:'Fraunces',serif; font-size:18px; margin:0 0 6px;">My Words</h3>
       <p class="muted" style="font-size:13px; margin:0 0 14px;">Add any word you want to drill — it joins the same daily review rotation.</p>
-      <div class="row" style="margin-bottom:10px;">
+      <div class="row" style="margin-bottom:8px;">
         <input type="text" id="custom-word-input" class="custom-input" placeholder="Word or phrase">
         <input type="text" id="custom-note-input" class="custom-input" placeholder="中文 / note (optional)">
       </div>
+      <input type="text" id="custom-def-input" class="custom-input" placeholder="English meaning (auto-looked up, or type it here)" style="width:100%; box-sizing:border-box; margin-bottom:10px;">
       <button class="btn primary" id="custom-word-add-btn" onclick="addCustomWord()" style="width:100%; justify-content:center;">+ Add to my list</button>
       <div id="custom-word-msg" style="font-size:12px; margin-top:8px; display:none;"></div>
     </div>
@@ -648,10 +649,12 @@ async function addCustomWord(){
   state.customVocab = state.customVocab || [];
   const wordInput = document.getElementById('custom-word-input');
   const noteInput = document.getElementById('custom-note-input');
+  const defInput  = document.getElementById('custom-def-input');
   const msg = document.getElementById('custom-word-msg');
   const btn = document.getElementById('custom-word-add-btn');
-  const word = wordInput.value.trim();
-  const note = noteInput.value.trim();
+  const word    = wordInput.value.trim();
+  const note    = noteInput.value.trim();
+  const manualDef = defInput ? defInput.value.trim() : '';
   const showMsg = (text, color) => { msg.style.display=''; msg.style.color=color; msg.textContent=text; };
   if(!word){ showMsg('Please enter a word or phrase.', 'var(--coral)'); return; }
   const lw = word.toLowerCase();
@@ -660,7 +663,7 @@ async function addCustomWord(){
   }
   btn.disabled = true;
   showMsg('Looking up definition…', 'var(--muted)');
-  let def='', ipa='', pos='custom', ex='';
+  let def=manualDef, ipa='', pos='custom', ex='';
   try{
     const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
     if(res.ok){
@@ -672,15 +675,15 @@ async function addCustomWord(){
         const m = entry.meanings[0];
         pos = m.partOfSpeech||'custom';
         if(m.definitions&&m.definitions.length){
-          def = m.definitions[0].definition||'';
-          ex  = m.definitions[0].example||'';
+          if(!def) def = m.definitions[0].definition||'';
+          ex = m.definitions[0].example||'';
         }
       }
     }
   }catch(e){}
   btn.disabled = false;
   state.customVocab.push({word, note, def, ipa, pos, ex, dateAdded:todayStr()});
-  wordInput.value=''; noteInput.value='';
+  wordInput.value=''; noteInput.value=''; if(defInput) defInput.value='';
   showMsg(`"${word}" added!`, 'var(--sage)');
   setTimeout(()=>{ msg.style.display='none'; }, 2500);
   saveState();
@@ -715,6 +718,28 @@ function renderCustomTopics(){
     </div>`).join('');
 }
 
+const TOPIC_Q_TEMPLATES = [
+  "How has {topic} affected your daily life recently?",
+  "What's your honest take on {topic}?",
+  "Has {topic} changed the way you think about anything?",
+  "What's the most interesting thing you've noticed about {topic}?",
+  "What's a common misconception people have about {topic}?",
+  "If you had to explain {topic} to your parents, what would you say?",
+  "Do you think {topic} will matter more or less five years from now?",
+  "Has {topic} ever come up in a conversation at work? How did it go?",
+  "What aspect of {topic} do you find most surprising?",
+  "Have your views on {topic} changed over time? What shifted them?",
+  "Who in your life do you think is most affected by {topic}?",
+  "What's one thing you wish more people understood about {topic}?",
+  "Is {topic} something you actively follow, or do you just come across it sometimes?",
+  "What would you want to know more about when it comes to {topic}?",
+  "If someone pushed back on your view of {topic}, how would you respond?"
+];
+function topicFromTemplates(title){
+  const qs = [...TOPIC_Q_TEMPLATES].sort(()=>Math.random()-0.5).slice(0,3).map(q=>q.replace(/\{topic\}/g,title));
+  return {blurb:`A personal conversation about ${title}.`, questions:qs, vocab:[]};
+}
+
 async function generateTopic(){
   const input = document.getElementById('custom-topic-input');
   const msg   = document.getElementById('custom-topic-msg');
@@ -727,29 +752,31 @@ async function generateTopic(){
   showMsg('Generating…','var(--muted)');
   const key = claudeKey();
   const prompt = `You are helping an English learner (native Mandarin speaker, intermediate-advanced) practice conversational English.\nTopic: "${title}"\nReply ONLY with this JSON, no other text:\n{"blurb":"one engaging sentence about the topic, max 15 words","questions":["personal open-ended question 1","personal open-ended question 2","personal open-ended question 3"],"vocab":[["word1","short plain-English definition"],["word2","short plain-English definition"],["word3","short plain-English definition"]]}\nKeep language natural and conversational, suitable for workplace or social small talk.`;
-  try{
-    const res = await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      mode:'cors',
-      headers:{'x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-use':'true','content-type':'application/json'},
-      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:400,messages:[{role:'user',content:prompt}]})
-    });
-    const data = await res.json();
-    if(data.error) throw new Error(data.error.message||'API error');
-    let raw = data.content[0].text.trim();
-    const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if(fence) raw = fence[1].trim();
-    const parsed = JSON.parse(raw);
-    state.customTopics = state.customTopics||[];
-    state.customTopics.unshift({title, blurb:parsed.blurb, questions:parsed.questions, vocab:parsed.vocab||[], dateAdded:todayStr()});
-    input.value='';
-    showMsg(`"${title}" added!`,'var(--sage)');
-    setTimeout(()=>{ msg.style.display='none'; },2500);
-    saveState();
-    renderCustomTopics();
-  }catch(e){
-    showMsg(`Error: ${e.name} — ${e.message}`,'var(--coral)');
+  let parsed = null;
+  if(key){
+    try{
+      const res = await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST', mode:'cors',
+        headers:{'x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-use':'true','content-type':'application/json'},
+        body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:400,messages:[{role:'user',content:prompt}]})
+      });
+      const data = await res.json();
+      if(!data.error){
+        let raw = data.content[0].text.trim();
+        const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+        if(fence) raw = fence[1].trim();
+        parsed = JSON.parse(raw);
+      }
+    }catch(e){}
   }
+  if(!parsed) parsed = topicFromTemplates(title);
+  state.customTopics = state.customTopics||[];
+  state.customTopics.unshift({title, blurb:parsed.blurb, questions:parsed.questions, vocab:parsed.vocab||[], dateAdded:todayStr()});
+  input.value='';
+  showMsg(`"${title}" added!`,'var(--sage)');
+  setTimeout(()=>{ msg.style.display='none'; },2500);
+  saveState();
+  renderCustomTopics();
   btn.disabled=false;
 }
 
@@ -761,24 +788,28 @@ async function refreshTopicQuestions(i){
   const btn = document.getElementById(`refresh-topic-btn-${i}`);
   if(btn){ btn.disabled=true; btn.textContent='↺ Refreshing…'; }
   const prompt = `You are helping an English learner practice conversational English.\nTopic: "${t.title}"\nCreate DIFFERENT discussion questions from before. Reply ONLY with this JSON, no other text:\n{"blurb":"one engaging sentence about the topic, max 15 words","questions":["personal open-ended question 1","personal open-ended question 2","personal open-ended question 3"],"vocab":[["word1","short plain-English definition"],["word2","short plain-English definition"],["word3","short plain-English definition"]]}`;
-  try{
-    const res = await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'x-api-key':claudeKey(),'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-use':'true','content-type':'application/json'},
-      body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:400,messages:[{role:'user',content:prompt}]})
-    });
-    const data = await res.json();
-    if(data.error) throw new Error(data.error.message||'API error');
-    let raw = data.content[0].text.trim();
-    const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if(fence) raw = fence[1].trim();
-    const parsed = JSON.parse(raw);
-    state.customTopics[i] = {...t, blurb:parsed.blurb, questions:parsed.questions, vocab:parsed.vocab||[]};
-    saveState();
-    renderCustomTopics();
-  }catch(e){
-    if(btn){ btn.disabled=false; btn.textContent='↺ New questions'; }
+  let parsed = null;
+  const key = claudeKey();
+  if(key){
+    try{
+      const res = await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST', mode:'cors',
+        headers:{'x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-use':'true','content-type':'application/json'},
+        body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:400,messages:[{role:'user',content:prompt}]})
+      });
+      const data = await res.json();
+      if(!data.error){
+        let raw = data.content[0].text.trim();
+        const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+        if(fence) raw = fence[1].trim();
+        parsed = JSON.parse(raw);
+      }
+    }catch(e){}
   }
+  if(!parsed) parsed = topicFromTemplates(t.title);
+  state.customTopics[i] = {...t, blurb:parsed.blurb, questions:parsed.questions, vocab:parsed.vocab||[]};
+  saveState();
+  renderCustomTopics();
 }
 
 function deleteCustomTopic(i){
