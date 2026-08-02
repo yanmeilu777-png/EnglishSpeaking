@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Fluent — daily English practice</title>
+<script>
+window.onerror = function(msg, src, line){
+  var d = document.getElementById('_err') || document.createElement('div');
+  d.id = '_err';
+  d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;padding:14px;font-size:13px;z-index:99999;font-family:monospace;white-space:pre-wrap;';
+  d.textContent = 'JS ERROR line ' + line + ':\n' + msg;
+  if(document.body) document.body.appendChild(d);
+  else document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(d); });
+};
+</script>
+<noscript><p style="color:red;padding:20px">JavaScript is disabled — please enable it to use Fluent.</p></noscript>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -283,12 +294,6 @@
 </div>
 
 <script>
-window.onerror = function(msg, src, line){
-  var d = document.createElement('div');
-  d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#c0392b;color:#fff;padding:12px;font-size:13px;z-index:99999;font-family:monospace;';
-  d.textContent = 'JS ERROR (line '+line+'): '+msg;
-  document.body.appendChild(d);
-};
 const PHRASES = [
   {cat:'family', text:"I've been meaning to ask you something.", ipa:"/aɪv bɪn ˈmiːnɪŋ tuː æsk juː ˈsʌmθɪŋ/", tip:"A gentle way to open a topic you've been holding onto. Pause after it — let them invite you in."},
   {cat:'family', text:"It means a lot to me that you noticed.", ipa:"/ɪt miːnz ə lɒt tuː miː ðæt juː ˈnoʊtɪst/", tip:"Use this to acknowledge care without sounding overly formal."},
