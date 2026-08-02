@@ -733,7 +733,11 @@ async function generateTopic(){
       body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:400,messages:[{role:'user',content:prompt}]})
     });
     const data = await res.json();
-    const parsed = JSON.parse(data.content[0].text.trim());
+    if(data.error) throw new Error(data.error.message||'API error');
+    let raw = data.content[0].text.trim();
+    const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if(fence) raw = fence[1].trim();
+    const parsed = JSON.parse(raw);
     state.customTopics = state.customTopics||[];
     state.customTopics.unshift({title, blurb:parsed.blurb, questions:parsed.questions, vocab:parsed.vocab||[], dateAdded:todayStr()});
     input.value='';
@@ -742,7 +746,7 @@ async function generateTopic(){
     saveState();
     renderCustomTopics();
   }catch(e){
-    showMsg('Could not generate. Try again.','var(--coral)');
+    showMsg('Error: '+(e.message||'Could not generate. Try again.'),'var(--coral)');
   }
   btn.disabled=false;
 }
@@ -762,7 +766,11 @@ async function refreshTopicQuestions(i){
       body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:400,messages:[{role:'user',content:prompt}]})
     });
     const data = await res.json();
-    const parsed = JSON.parse(data.content[0].text.trim());
+    if(data.error) throw new Error(data.error.message||'API error');
+    let raw = data.content[0].text.trim();
+    const fence = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if(fence) raw = fence[1].trim();
+    const parsed = JSON.parse(raw);
     state.customTopics[i] = {...t, blurb:parsed.blurb, questions:parsed.questions, vocab:parsed.vocab||[]};
     saveState();
     renderCustomTopics();
